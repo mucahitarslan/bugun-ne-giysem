@@ -13,6 +13,13 @@ Canlı hava durumu verilerini analiz ederek sıcaklık, hissedilen sıcaklık ve
 - **🎨 Modern Arayüz:** Kullanıcı dostu, cam efekti (glassmorphism) detaylarına sahip mobil odaklı tasarım.
 - **🔒 Güvenli Bağlantı:** HTTPS ve özel İçerik Güvenlik Politikası (CSP) yapılandırmaları ile tam güvenlik.
 
+## 📸 Ekran Görüntüleri
+
+<div align="center">
+  <img src="analiz.png" alt="Uygulama Analiz Ekranı" width="300" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+</div>
+
 ## 🛠️ Kullanılan Teknolojiler
 
 - **HTML5 & CSS3:** Modern ve responsive arayüz tasarımı.
