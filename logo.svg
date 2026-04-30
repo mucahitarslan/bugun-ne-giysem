@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Uygulamanın arka plan gradyanı -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#667eea" />
+      <stop offset="100%" stop-color="#764ba2" />
+    </linearGradient>
+    
+    <!-- Modern gölge efekti -->
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="12" stdDeviation="15" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Arka Plan Kartı (PWA ikonları için hafif köşeli) -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  
+  <!-- Güneş İkonu -->
+  <circle cx="340" cy="180" r="90" fill="#FFD200" filter="url(#shadow)" />
+  
+  <!-- Tişört İkonu -->
+  <path d="M 136 210
+           L 200 180
+           Q 256 220 312 180
+           L 376 210
+           L 356 280
+           L 316 260
+           L 316 400
+           Q 256 410 196 400
+           L 196 260
+           L 156 280
+           Z" 
+        fill="#FFFFFF" filter="url(#shadow)" />
+</svg>

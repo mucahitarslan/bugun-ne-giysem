@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#764ba2">
+    <title>Bugün Ne Giysem?</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=20">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-status-bar" content="#764ba2">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/svg+xml" href="logo.svg">
+</head>
+
+<body>
+
+<div id="app" class="theme-default">
+
+    <div class="screen active" id="screen-loading">
+        <div class="splash-content">
+            <div class="splash-icon">🌤️</div>
+            <h1 class="app-title">Bugün<br><em>Ne Giysem?</em></h1>
+            <p class="splash-sub">Hava durumuna göre kıyafetini seç,<br>gün boyu rahat kal.</p>
+            <button class="btn-primary" id="btn-start">
+                <span>Başlayalım</span>
+                <span class="btn-arrow">→</span>
+            </button>
+            <button class="btn-primary" id="btn-install" hidden style="margin-top: 12px; background: #FFD200; color: #1A1A2E;">
+                <span>📱 Uygulamayı Yükle</span>
+            </button>
+        </div>
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <div class="screen" id="screen-1">
+        <div class="screen-inner">
+
+            <div class="screen-header">
+                <span class="step-chip">ADIM 01</span>
+                <h2 class="screen-title">Neredesin,<br>ne zaman çıkıyorsun?</h2>
+            </div>
+
+            <div class="glass-card location-card" id="location-card">
+                <div class="location-status" id="location-status" style="width: 100%;">
+                    <span class="loc-icon">📍</span>
+                    <div class="loc-info" style="width: 100%;">
+                        <label class="loc-label" for="city-select">Hangi Şehirdesin?</label>
+                        <select class="time-sel" id="city-select" style="width: 100%; margin-top: 6px; text-align: left; padding: 10px;">
+                            <option value="" disabled selected>Şehir seçiniz...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-title">Dışarıda ne zaman olacaksın?</div>
+            <div class="glass-card time-card">
+                <div class="time-col">
+                    <label class="time-lbl" for="time-start">🚪 Çıkış</label>
+                    <select class="time-sel" id="time-start"></select>
+                </div>
+                <div class="time-arrow">→</div>
+                <div class="time-col">
+                    <label class="time-lbl" for="time-end">🏠 Dönüş</label>
+                    <select class="time-sel" id="time-end"></select>
+                </div>
+            </div>
+
+            <div class="duration-tag" id="duration-tag"></div>
+
+            <div class="btn-wrap">
+                <button class="btn-primary" id="btn-step1-next" disabled>
+                    <span>Kıyafet Seç</span>
+                    <span class="btn-arrow">→</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="screen" id="screen-2">
+        <div class="screen-inner">
+
+            <div class="screen-header with-back">
+                <button class="btn-back" data-target="screen-1" id="btn-back-1">←</button>
+                <div>
+                    <span class="step-chip">ADIM 02</span>
+                    <h2 class="screen-title">Ne giymeyi<br>planlıyorsun?</h2>
+                    <p class="screen-sub">Her kategoriden birini seç</p>
+                </div>
+            </div>
+
+            <div class="cat-header">
+                <span class="cat-icon">👕</span>
+                <span class="cat-name">Üst Giyim</span>
+                <span class="cat-sel-badge" id="badge-top"></span>
+            </div>
+            <div class="outfit-grid" id="grid-top">
+                <div class="outfit-btn" data-cat="top" data-val="tisort"><span class="o-emoji">👕</span><span class="o-name">Tişört</span></div>
+                <div class="outfit-btn" data-cat="top" data-val="gomlek"><span class="o-emoji">👔</span><span class="o-name">Gömlek</span></div>
+                <div class="outfit-btn" data-cat="top" data-val="kazak"><span class="o-emoji">🧶</span><span class="o-name">Kazak</span></div>
+                <div class="outfit-btn" data-cat="top" data-val="hirka"><span class="o-emoji">🧥</span><span class="o-name">Hırka</span></div>
+                <div class="outfit-btn" data-cat="top" data-val="mont"><span class="o-emoji">🥼</span><span class="o-name">Mont</span></div>
+                <div class="outfit-btn" data-cat="top" data-val="yagmurluk"><span class="o-emoji">🌂</span><span class="o-name">Yağmurluk</span></div>
+            </div>
+
+            <div class="cat-header">
+                <span class="cat-icon">👖</span>
+                <span class="cat-name">Alt Giyim</span>
+                <span class="cat-sel-badge" id="badge-bottom"></span>
+            </div>
+            <div class="outfit-grid" id="grid-bottom">
+                <div class="outfit-btn" data-cat="bottom" data-val="sort"><span class="o-emoji">🩳</span><span class="o-name">Şort</span></div>
+                <div class="outfit-btn" data-cat="bottom" data-val="pantolon"><span class="o-emoji">👖</span><span class="o-name">Pantolon</span></div>
+                <div class="outfit-btn" data-cat="bottom" data-val="tayt"><span class="o-emoji">🩱</span><span class="o-name">Tayt</span></div>
+                <div class="outfit-btn" data-cat="bottom" data-val="etek"><span class="o-emoji">👗</span><span class="o-name">Etek</span></div>
+            </div>
+
+            <div class="cat-header">
+                <span class="cat-icon">👟</span>
+                <span class="cat-name">Ayakkabı</span>
+                <span class="cat-sel-badge" id="badge-shoes"></span>
+            </div>
+            <div class="outfit-grid" id="grid-shoes">
+                <div class="outfit-btn" data-cat="shoes" data-val="spor"><span class="o-emoji">👟</span><span class="o-name">Spor</span></div>
+                <div class="outfit-btn" data-cat="shoes" data-val="bot"><span class="o-emoji">👢</span><span class="o-name">Bot</span></div>
+                <div class="outfit-btn" data-cat="shoes" data-val="sandalet"><span class="o-emoji">🩴</span><span class="o-name">Sandalet</span></div>
+                <div class="outfit-btn" data-cat="shoes" data-val="loafer"><span class="o-emoji">🥿</span><span class="o-name">Loafer</span></div>
+            </div>
+
+            <div class="btn-wrap">
+                <button class="btn-primary" id="btn-analyze" disabled>
+                    <span>Analiz Et</span>
+                    <span class="btn-arrow">✨</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="screen" id="screen-3">
+        <div class="screen-inner result-inner">
+
+            <div class="weather-hero" id="weather-hero">
+                <button class="btn-back btn-back-white" data-target="screen-2" id="btn-back-2">←</button>
+                <div class="w-icon-big" id="result-icon">☀️</div>
+                <div class="w-temp" id="result-temp">--°</div>
+                <div class="w-desc" id="result-desc">Hava durumu yükleniyor</div>
+                <div class="w-badges" id="result-badges"></div>
+            </div>
+
+            <div class="bottom-sheet" id="bottom-sheet">
+                <div class="sheet-knob"></div>
+                <h3 class="sheet-title">Kıyafet Analizi</h3>
+                <div class="outfit-summary" id="outfit-summary"></div>
+                <div class="advice-list" id="advice-list"></div>
+                <div class="verdict-box" id="verdict-box"></div>
+                <button class="btn-restart" id="btn-restart">
+                    🔄 Yeniden Başla
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loading-overlay" hidden>
+        <div class="spinner-wrap">
+            <div class="spinner"></div>
+            <p class="spinner-text" id="spinner-text">Hava durumu alınıyor...</p>
+        </div>
+    </div>
+
+    <div class="error-toast" id="error-toast" hidden>
+        <span class="toast-icon">⚠️</span>
+        <span class="toast-msg" id="toast-msg"></span>
+    </div>
+
+</div>
+<!-- 1. İŞLETİM SİSTEMİ SEÇİM EKRANI -->
+    <div id="os-select-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9998; align-items: center; justify-content: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);">
+        <div style="background: var(--card-bg); padding: 24px; border-radius: var(--r-lg); width: 90%; max-width: 320px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <h3 style="margin-bottom: 20px; color: var(--clr-dark); font-family: 'Fraunces', serif;">Cihazınızı Seçin</h3>
+            <button id="btn-select-android" style="width: 100%; padding: 14px; margin-bottom: 12px; background: #3DDC84; color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">🤖 Android</button>
+            <button id="btn-select-ios" style="width: 100%; padding: 14px; margin-bottom: 20px; background: #000; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">🍎 iOS (iPhone / iPad)</button>
+            <button id="btn-close-os-select" style="background: transparent; color: var(--clr-mid); border: none; text-decoration: underline; cursor: pointer; font-size: 0.9rem;">İptal</button>
+        </div>
+    </div>
+
+    <!-- 2. iOS TALİMAT EKRANI -->
+    <div id="ios-instructions-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);">
+        <div style="background: var(--card-bg); padding: 24px; border-radius: var(--r-lg); width: 90%; max-width: 320px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <p style="font-size: 1.3rem; font-family: 'Fraunces', serif; font-weight: 700; margin-bottom: 12px; color: var(--clr-dark);">iPhone'a Yükle</p>
+            <p style="color: var(--clr-mid); margin-bottom: 20px; line-height: 1.5; font-size: 0.95rem;">
+                Alt menüdeki <b>Paylaş</b> (kare içinden yukarı ok) simgesine dokunun ve listeden<br><br><b>"Ana Ekrana Ekle"</b> seçeneğini seçin. 📱
+            </p>
+            <button id="btn-close-ios-modal" style="width: 100%; padding: 12px; background: #F4F4F8; color: var(--clr-dark); border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Anladım</button>
+        </div>
+    </div>
+<script src="app.js?v=20"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js')
+        .then(registration => {
+          console.log('Service Worker başarıyla kaydedildi!', registration.scope);
+        })
+        .catch(err => {
+          console.log('Service Worker kaydı başarısız oldu: ', err);
+        });
+    });
+  }
+</script>
+
+</body>
+</html>
