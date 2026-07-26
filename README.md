@@ -1,36 +1,69 @@
-# 🌤️ Bugün Ne Giysem? - Akıllı Kıyafet Rehberi
+# 🌤️ Bugün Ne Giysem?
 
-**Bugün Ne Giysem?**, kullanıcıların bulundukları şehre ve dışarıda geçirecekleri saat aralığına göre en doğru kıyafet seçimlerini yapmalarına yardımcı olan, **PWA (Progressive Web App)** tabanlı modern bir web uygulamasıdır. 
+Türkiye'deki 81 il için saatlik hava tahminini seçilen kıyafetlerle karşılaştıran, mobil odaklı bir Progressive Web App.
 
-Canlı hava durumu verilerini analiz ederek sıcaklık, hissedilen sıcaklık ve yağış ihtimaline göre kullanıcıya özel kombin önerileri sunar.
+## Özellikler
 
-## ✨ Özellikler
+- Şehir ve dışarıda kalınacak saat aralığına göre analiz
+- Sıcaklık, hissedilen sıcaklık, yağış ve rüzgâr değerlendirmesi
+- Üst giyim, alt giyim ve ayakkabı için kural tabanlı öneriler
+- Android ve iOS ana ekran kurulumu
+- Çevrimdışı açılabilen uygulama kabuğu
+- Son şehir, saat ve kıyafet tercihlerinin cihazda saklanması
+- Klavye ve ekran okuyucu dostu seçim kontrolleri
 
-- **🌍 81 İl Desteği:** Türkiye'nin tüm illeri için güncel hava durumu analizi.
-- **⏱️ Saatlik Analiz:** Dışarı çıkış ve dönüş saatlerine göre noktasal hava durumu tahmini.
-- **📱 PWA Desteği (Mobil Uygulama):** Hem **Android** hem de **iOS (iPhone/iPad)** cihazlara tarayıcı üzerinden yerel bir uygulama gibi yüklenebilir. Özel indirme menüleri ve bilgilendirme ekranları içerir.
-- **⚡ Çevrimdışı Uyumluluk:** Service Worker altyapısı sayesinde statik dosyaları önbelleğe alır ve hızlı çalışır.
-- **🎨 Modern Arayüz:** Kullanıcı dostu, cam efekti (glassmorphism) detaylarına sahip mobil odaklı tasarım.
-- **🔒 Güvenli Bağlantı:** HTTPS ve özel İçerik Güvenlik Politikası (CSP) yapılandırmaları ile tam güvenlik.
+## Teknolojiler
 
-## 📸 Ekran Görüntüleri
+- HTML5
+- CSS3
+- Vanilla JavaScript
+- Open-Meteo Forecast API
+- Service Worker ve Web App Manifest
+- Apache `.htaccess`
 
-<div align="center">
-  <img src="analiz.png" alt="Uygulama Analiz Ekranı" width="300" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-</div>
+Uygulamada PHP kodu veya derleme adımı yoktur. Bu nedenle statik dosya yayınlayabilen bir PHP/Apache paylaşımlı hostingde çalışır.
 
-## 🛠️ Kullanılan Teknolojiler
+## Yerelde çalıştırma
 
-- **HTML5 & CSS3:** Modern ve responsive arayüz tasarımı.
-- **Vanilla JavaScript:** Hiçbir dış kütüphane (framework) kullanılmadan yazılmış saf ve hızlı JS mantığı.
-- **[Open-Meteo API](https://open-meteo.com/):** Hava durumu verilerini çekmek için kullanılan, anahtar gerektirmeyen hızlı ve güvenilir hava durumu servisi.
-- **PWA (Service Workers & Manifest):** Mobil cihaza kurulabilme özellikleri.
+Depoyu klonlayın:
 
-## 🚀 Kurulum ve Çalıştırma
+```bash
+git clone https://github.com/mucahitarslan/bugun-ne-giysem.git
+cd bugun-ne-giysem
+```
 
-Bu proje herhangi bir derleme (build) sürecine ihtiyaç duymaz. Sadece statik dosyaları bir web sunucusuna yüklemeniz yeterlidir.
+PHP'nin yerleşik sunucusunu başlatın:
 
-1. Repoyu bilgisayarınıza klonlayın:
-   ```bash
-   git clone [https://github.com/kullaniciadiniz/bugun-ne-giysem.git](https://github.com/kullaniciadiniz/bugun-ne-giysem.git)
+```bash
+php -S 127.0.0.1:8080
+```
+
+Ardından `http://127.0.0.1:8080` adresini açın.
+
+## PHP/Apache hosting kurulumu
+
+1. Depodaki dosyaları `.htaccess` dahil olmak üzere hosting hesabının `public_html` dizinine yükleyin.
+2. Alan adında geçerli bir SSL sertifikası bulunduğundan ve HTTPS yönlendirmesinin etkin olduğundan emin olun.
+3. Apache'de `mod_headers` ve tercihen `mod_deflate` modüllerinin etkin olduğunu doğrulayın.
+4. Hosting dosya yöneticisinin nokta ile başlayan `.htaccess` dosyasını gizlemediğini kontrol edin.
+5. Tarayıcıdan `https://api.open-meteo.com` adresine yapılan bağlantıların güvenlik duvarı veya proxy tarafından engellenmediğini doğrulayın.
+
+PWA kurulumu ve Service Worker normal alan adlarında HTTPS gerektirir. `localhost` geliştirme amacıyla güvenli bağlam kabul edilir.
+
+## Testler
+
+Node.js 18 veya üzeriyle:
+
+```bash
+npm test
+```
+
+Test paketi JavaScript sözdizimini, manifest yapısını, uygulama kabuğu/cache eşleşmesini, erişilebilir seçim kontrollerini ve kritik hava analizi kurallarını kontrol eder.
+
+## Veri ve gizlilik
+
+Seçilen ilin koordinatları hava tahmini almak amacıyla doğrudan Open-Meteo'ya gönderilir. Uygulama hesap oluşturmaz ve sunucu tarafında kişisel veri saklamaz. Tercihler yalnızca kullanıcının tarayıcısındaki `localStorage` alanında tutulur.
+
+## Lisans
+
+Bu proje [MIT lisansı](LICENSE) ile sunulmaktadır.

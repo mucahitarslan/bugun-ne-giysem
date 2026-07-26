@@ -1,0 +1,12 @@
+{
+  "name": "bugun-ne-giysem",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hava durumuna göre kıyafet uygunluğu analizi yapan PWA",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
