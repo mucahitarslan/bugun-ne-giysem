@@ -76,6 +76,21 @@
             <div class="section-title">Hangi gün için plan yapıyorsun?</div>
             <div class="date-options" id="date-options" role="group" aria-label="Tahmin günü"></div>
 
+            <div class="section-title">Havayı genelde nasıl hissedersin?</div>
+            <div class="profile-options" role="group" aria-label="Sıcaklık hassasiyeti">
+                <button type="button" class="profile-btn" data-profile="sensitivity" data-val="cold">🥶 Çabuk üşürüm</button>
+                <button type="button" class="profile-btn selected" data-profile="sensitivity" data-val="balanced">🙂 Dengeli</button>
+                <button type="button" class="profile-btn" data-profile="sensitivity" data-val="hot">🥵 Çabuk terlerim</button>
+            </div>
+
+            <div class="section-title">Dışarıdayken ne yapacaksın?</div>
+            <div class="activity-options" role="group" aria-label="Aktivite seviyesi">
+                <button type="button" class="activity-btn" data-val="vehicle">🚗 Araç ağırlıklı</button>
+                <button type="button" class="activity-btn selected" data-val="normal">🚶 Normal</button>
+                <button type="button" class="activity-btn" data-val="walking">🥾 Uzun yürüyüş</button>
+                <button type="button" class="activity-btn" data-val="sport">🏃 Spor</button>
+            </div>
+
             <div class="section-title">Dışarıda ne zaman olacaksın?</div>
             <div class="glass-card time-card">
                 <div class="time-col">
@@ -109,7 +124,7 @@
                 <div>
                     <span class="step-chip">ADIM 02</span>
                     <h2 class="screen-title" tabindex="-1">Ne giymeyi<br>planlıyorsun?</h2>
-                    <p class="screen-sub">Her kategoriden birini seç</p>
+                    <p class="screen-sub">Temel kategorileri seç; dış katman ve aksesuarlar isteğe bağlı</p>
                 </div>
             </div>
 
@@ -121,10 +136,12 @@
             <div class="outfit-grid" id="grid-top">
                 <button type="button" class="outfit-btn" data-cat="top" data-val="tisort"><span class="o-emoji">👕</span><span class="o-name">Tişört</span></button>
                 <button type="button" class="outfit-btn" data-cat="top" data-val="gomlek"><span class="o-emoji">👔</span><span class="o-name">Gömlek</span></button>
+                <button type="button" class="outfit-btn" data-cat="top" data-val="sweatshirt"><span class="o-emoji">🧥</span><span class="o-name">Sweatshirt</span></button>
                 <button type="button" class="outfit-btn" data-cat="top" data-val="kazak"><span class="o-emoji">🧶</span><span class="o-name">Kazak</span></button>
                 <button type="button" class="outfit-btn" data-cat="top" data-val="hirka"><span class="o-emoji">🧥</span><span class="o-name">Hırka</span></button>
                 <button type="button" class="outfit-btn" data-cat="top" data-val="mont"><span class="o-emoji">🥼</span><span class="o-name">Mont</span></button>
                 <button type="button" class="outfit-btn" data-cat="top" data-val="yagmurluk"><span class="o-emoji">🌂</span><span class="o-name">Yağmurluk</span></button>
+                <button type="button" class="outfit-btn" data-cat="top" data-val="elbise"><span class="o-emoji">👗</span><span class="o-name">Elbise</span></button>
             </div>
 
             <div class="cat-header">
@@ -137,6 +154,20 @@
                 <button type="button" class="outfit-btn" data-cat="bottom" data-val="pantolon"><span class="o-emoji">👖</span><span class="o-name">Pantolon</span></button>
                 <button type="button" class="outfit-btn" data-cat="bottom" data-val="tayt"><span class="o-emoji">🩱</span><span class="o-name">Tayt</span></button>
                 <button type="button" class="outfit-btn" data-cat="bottom" data-val="etek"><span class="o-emoji">👗</span><span class="o-name">Etek</span></button>
+                <button type="button" class="outfit-btn" data-cat="bottom" data-val="yok"><span class="o-emoji">➖</span><span class="o-name">Elbise için yok</span></button>
+            </div>
+
+            <div class="cat-header">
+                <span class="cat-icon">🧥</span>
+                <span class="cat-name">Dış Katman</span>
+                <span class="cat-sel-badge done" id="badge-outer">✓ Yok</span>
+            </div>
+            <div class="outfit-grid" id="grid-outer">
+                <button type="button" class="outfit-btn selected" data-cat="outer" data-val="yok"><span class="o-emoji">➖</span><span class="o-name">Yok</span></button>
+                <button type="button" class="outfit-btn" data-cat="outer" data-val="ceket"><span class="o-emoji">🧥</span><span class="o-name">Ceket</span></button>
+                <button type="button" class="outfit-btn" data-cat="outer" data-val="mont"><span class="o-emoji">🥼</span><span class="o-name">Mont</span></button>
+                <button type="button" class="outfit-btn" data-cat="outer" data-val="kaban"><span class="o-emoji">🧥</span><span class="o-name">Kaban</span></button>
+                <button type="button" class="outfit-btn" data-cat="outer" data-val="yagmurluk"><span class="o-emoji">🌧️</span><span class="o-name">Yağmurluk</span></button>
             </div>
 
             <div class="cat-header">
@@ -149,6 +180,20 @@
                 <button type="button" class="outfit-btn" data-cat="shoes" data-val="bot"><span class="o-emoji">👢</span><span class="o-name">Bot</span></button>
                 <button type="button" class="outfit-btn" data-cat="shoes" data-val="sandalet"><span class="o-emoji">🩴</span><span class="o-name">Sandalet</span></button>
                 <button type="button" class="outfit-btn" data-cat="shoes" data-val="loafer"><span class="o-emoji">🥿</span><span class="o-name">Loafer</span></button>
+                <button type="button" class="outfit-btn" data-cat="shoes" data-val="waterproof"><span class="o-emoji">🥾</span><span class="o-name">Su geçirmez</span></button>
+            </div>
+
+            <div class="cat-header">
+                <span class="cat-icon">🎒</span>
+                <span class="cat-name">Yanına Alacakların</span>
+                <span class="cat-sel-badge" id="badge-accessories">İsteğe bağlı</span>
+            </div>
+            <div class="accessory-grid" id="grid-accessories">
+                <button type="button" class="accessory-btn" data-val="umbrella" aria-pressed="false">☂️ Şemsiye</button>
+                <button type="button" class="accessory-btn" data-val="hat" aria-pressed="false">🧢 Şapka</button>
+                <button type="button" class="accessory-btn" data-val="scarf" aria-pressed="false">🧣 Atkı</button>
+                <button type="button" class="accessory-btn" data-val="gloves" aria-pressed="false">🧤 Eldiven</button>
+                <button type="button" class="accessory-btn" data-val="thermal" aria-pressed="false">♨️ Termal içlik</button>
             </div>
 
             <div class="btn-wrap">
@@ -176,6 +221,7 @@
                 <div class="sheet-knob"></div>
                 <h3 class="sheet-title">Kıyafet Analizi</h3>
                 <div class="outfit-summary" id="outfit-summary"></div>
+                <div class="decision-metrics" id="decision-metrics" aria-label="Analizde kullanılan hava ölçütleri"></div>
                 <div class="advice-list" id="advice-list"></div>
                 <div class="verdict-box" id="verdict-box"></div>
                 <button class="btn-restart" id="btn-restart">

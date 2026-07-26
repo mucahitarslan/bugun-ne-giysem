@@ -5,9 +5,11 @@ const state = {
   lon: null,
   locationName: '',
   selectedDay: 0,
+  sensitivity: 'balanced',
+  activity: 'normal',
   startHour: 9,
   endHour: 18,
-  outfit: { top: null, bottom: null, shoes: null },
+  outfit: { top: null, bottom: null, outer: 'yok', shoes: null, accessories: [] },
   rawWeather: null,
   weather: null,
   weatherIsCached: false,
@@ -23,6 +25,8 @@ function savePreferences() {
       lat: state.lat,
       lon: state.lon,
       selectedDay: state.selectedDay,
+      sensitivity: state.sensitivity,
+      activity: state.activity,
       startHour: state.startHour,
       endHour: state.endHour,
       outfit: state.outfit,
@@ -53,6 +57,8 @@ function restorePreferences() {
     if (Number.isInteger(saved.selectedDay) && saved.selectedDay >= 0 && saved.selectedDay <= 2) {
       state.selectedDay = saved.selectedDay;
     }
+    if (['cold', 'balanced', 'hot'].includes(saved.sensitivity)) state.sensitivity = saved.sensitivity;
+    if (['vehicle', 'normal', 'walking', 'sport'].includes(saved.activity)) state.activity = saved.activity;
     if (Number.isInteger(saved.startHour) && saved.startHour >= 6 && saved.startHour <= 23) {
       state.startHour = saved.startHour;
       document.getElementById('time-start').value = String(saved.startHour);
@@ -62,7 +68,7 @@ function restorePreferences() {
       document.getElementById('time-end').value = String(saved.endHour);
     }
 
-    ['top', 'bottom', 'shoes'].forEach(cat => {
+    ['top', 'bottom', 'outer', 'shoes'].forEach(cat => {
       const val = saved.outfit?.[cat];
       const button = document.querySelector(`.outfit-btn[data-cat="${cat}"][data-val="${val}"]`);
       if (!button) return;
@@ -71,10 +77,24 @@ function restorePreferences() {
       button.setAttribute('aria-pressed', 'true');
       updateCategoryBadge(cat, button.querySelector('.o-name').textContent);
     });
+    state.outfit.accessories = Array.isArray(saved.outfit?.accessories)
+      ? saved.outfit.accessories.filter(value => ['umbrella', 'hat', 'scarf', 'gloves', 'thermal'].includes(value))
+      : [];
+    document.querySelectorAll('.accessory-btn').forEach(button => {
+      const selected = state.outfit.accessories.includes(button.dataset.val);
+      button.classList.toggle('selected', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+    const accessoryBadge = document.getElementById('badge-accessories');
+    accessoryBadge.textContent = state.outfit.accessories.length
+      ? `✓ ${state.outfit.accessories.length} seçildi`
+      : 'İsteğe bağlı';
+    accessoryBadge.classList.toggle('done', state.outfit.accessories.length > 0);
 
     const { top, bottom, shoes } = state.outfit;
     document.getElementById('btn-analyze').disabled = !(top && bottom && shoes);
     updateDateSelection();
+    updateProfileSelection();
     updateDurationTag();
   } catch {
     try {
@@ -189,6 +209,39 @@ function initDateSelection() {
 function updateDateSelection() {
   document.querySelectorAll('.date-btn').forEach(button => {
     const selected = Number(button.dataset.day) === state.selectedDay;
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+}
+
+function initProfileSelection() {
+  document.querySelectorAll('.profile-btn').forEach(button => {
+    button.setAttribute('aria-pressed', 'false');
+    button.addEventListener('click', () => {
+      state.sensitivity = button.dataset.val;
+      updateProfileSelection();
+      savePreferences();
+    });
+  });
+  document.querySelectorAll('.activity-btn').forEach(button => {
+    button.setAttribute('aria-pressed', 'false');
+    button.addEventListener('click', () => {
+      state.activity = button.dataset.val;
+      updateProfileSelection();
+      savePreferences();
+    });
+  });
+  updateProfileSelection();
+}
+
+function updateProfileSelection() {
+  document.querySelectorAll('.profile-btn').forEach(button => {
+    const selected = button.dataset.val === state.sensitivity;
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  document.querySelectorAll('.activity-btn').forEach(button => {
+    const selected = button.dataset.val === state.activity;
     button.classList.toggle('selected', selected);
     button.setAttribute('aria-pressed', String(selected));
   });
@@ -451,8 +504,28 @@ function initOutfitSelection() {
   });
 }
 
+function initAccessorySelection() {
+  document.querySelectorAll('.accessory-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const value = button.dataset.val;
+      const selected = state.outfit.accessories.includes(value);
+      state.outfit.accessories = selected
+        ? state.outfit.accessories.filter(item => item !== value)
+        : [...state.outfit.accessories, value];
+      button.classList.toggle('selected', !selected);
+      button.setAttribute('aria-pressed', String(!selected));
+      const badge = document.getElementById('badge-accessories');
+      badge.textContent = state.outfit.accessories.length
+        ? `✓ ${state.outfit.accessories.length} seçildi`
+        : 'İsteğe bağlı';
+      badge.classList.toggle('done', state.outfit.accessories.length > 0);
+      savePreferences();
+    });
+  });
+}
+
 function updateCategoryBadge(cat, name) {
-  const map = { top: 'badge-top', bottom: 'badge-bottom', shoes: 'badge-shoes' };
+  const map = { top: 'badge-top', bottom: 'badge-bottom', outer: 'badge-outer', shoes: 'badge-shoes' };
   const badge = document.getElementById(map[cat]);
   if (!badge) return;
   badge.textContent = `✓ ${name}`;
@@ -467,9 +540,12 @@ async function fetchWeather() {
     hourly: [
       'temperature_2m',
       'apparent_temperature',
+      'relative_humidity_2m',
       'precipitation_probability',
       'precipitation',
       'wind_speed_10m',
+      'wind_gusts_10m',
+      'uv_index',
       'weather_code',
     ].join(','),
     timezone: 'Europe/Istanbul',
@@ -537,9 +613,12 @@ function validateWeatherResponse(raw) {
     'time',
     'temperature_2m',
     'apparent_temperature',
+    'relative_humidity_2m',
     'precipitation_probability',
     'precipitation',
     'wind_speed_10m',
+    'wind_gusts_10m',
+    'uv_index',
     'weather_code',
   ];
   const expectedLength = raw?.hourly?.time?.length;
@@ -570,9 +649,12 @@ function filterHourlyData(raw) {
 
   const temps       = indices.map(i => raw.hourly.temperature_2m[i]);
   const feelsLikes  = indices.map(i => raw.hourly.apparent_temperature[i]);
+  const humidities  = indices.map(i => raw.hourly.relative_humidity_2m[i]);
   const rainProbs   = indices.map(i => raw.hourly.precipitation_probability[i]);
   const rainAmounts = indices.map(i => raw.hourly.precipitation[i]);
   const winds       = indices.map(i => raw.hourly.wind_speed_10m[i]);
+  const gusts       = indices.map(i => raw.hourly.wind_gusts_10m[i]);
+  const uvIndices   = indices.map(i => raw.hourly.uv_index[i]);
   const codes       = indices.map(i => raw.hourly.weather_code[i]);
   const representativeCode = getMostSignificantWeatherCode(codes);
 
@@ -581,10 +663,13 @@ function filterHourlyData(raw) {
     maxTemp:    Math.max(...temps),
     avgTemp:    avg(temps),
     feelsLike:  avg(feelsLikes),
+    humidity:   Math.round(avg(humidities)),
     willRain:   rainAmounts.some(r => r > 0.2) || rainProbs.some(p => p >= 50),
     rainAmount: Math.max(...rainAmounts),
     maxRainProb: Math.max(...rainProbs),
     windSpeed:  Math.max(...winds),
+    windGust:   Math.max(...gusts),
+    uvIndex:    Math.max(...uvIndices),
     weatherCode: representativeCode,
   };
 }
@@ -644,11 +729,14 @@ function applyTheme(theme) {
   app.classList.add(`theme-${theme}`);
 }
 
-function analyzeOutfit(w, outfit) {
+function analyzeOutfit(w, outfit, preferences = {}) {
   const tips = [];
-  const { top, bottom, shoes } = outfit;
+  const { top, bottom, outer = 'yok', shoes, accessories = [] } = outfit;
   const { minTemp, maxTemp, avgTemp, feelsLike, willRain,
-          rainAmount, maxRainProb, windSpeed, weatherCode } = w;
+          rainAmount, maxRainProb, windSpeed, windGust = windSpeed,
+          humidity = 50, uvIndex = 0, weatherCode } = w;
+  const sensitivity = preferences.sensitivity || 'balanced';
+  const activity = preferences.activity || 'normal';
 
   if (top === 'tisort') {
     if (maxTemp >= 28) tips.push({ type:'success', icon:'✅', text:`Tişört bu ${Math.round(maxTemp)}°C'lik sıcaklık için biçilmiş kaftan. Hafif ve serin tutacak.` });
@@ -672,6 +760,14 @@ function analyzeOutfit(w, outfit) {
     else if (avgTemp >= 18 && avgTemp < 28) tips.push({ type:'success', icon:'✅', text:`Hırka bu hava için akıllıca bir seçim. Serin yerlerde kapatır, ılık yerlerde açarsın.` });
     else if (avgTemp >= 10 && avgTemp < 18) tips.push({ type:'warning', icon:'⚠️', text:`${Math.round(avgTemp)}°C için hırka yeterince sıcak tutmayabilir. Altına kalın bir tişört ya da termal giymek işe yarar.` });
     else tips.push({ type:'danger', icon:'🥶', text:`Bu soğuk havada (${Math.round(avgTemp)}°C) hırka yetersiz kalacak. Bir mont giymen çok daha iyi olur.` });
+  } else if (top === 'sweatshirt') {
+    if (maxTemp >= 26) tips.push({ type:'warning', icon:'🌡️', text:`${Math.round(maxTemp)}°C'de sweatshirt özellikle hareket ederken sıcak gelebilir.` });
+    else if (avgTemp >= 10) tips.push({ type:'success', icon:'✅', text:'Sweatshirt bu sıcaklık aralığında rahat ve dengeli bir seçim.' });
+    else tips.push({ type:'warning', icon:'🥶', text:'Sweatshirt tek başına bu soğukta yetersiz kalabilir; dış katman ekle.' });
+  } else if (top === 'elbise') {
+    if (maxTemp >= 22) tips.push({ type:'success', icon:'✅', text:'Elbise ılık ve sıcak hava için ferah bir seçim.' });
+    else if (avgTemp < 15) tips.push({ type:'warning', icon:'🥶', text:`${Math.round(avgTemp)}°C'de elbiseyi tayt ve dış katmanla desteklemen iyi olur.` });
+    if (windSpeed > 20) tips.push({ type:'warning', icon:'🌬️', text:`${Math.round(windSpeed)} km/sa rüzgârda elbisenin kesimine dikkat et.` });
   } else if (top === 'mont') {
     if (maxTemp >= 22) tips.push({ type:'danger', icon:'🔥', text:`${Math.round(maxTemp)}°C'de mont giymek ciddi bunalma riski taşır. Bu sıcaklıkta montu çıkarmadan taşımak da çok yorucu olur.` });
     else if (avgTemp >= 12 && avgTemp < 22) tips.push({ type:'warning', icon:'♨️', text:`Mont bu hava için biraz fazla olabilir. ${Math.round(avgTemp)}°C'de hırka veya kalın kazak daha uygun bir tercih.` });
@@ -706,6 +802,9 @@ function analyzeOutfit(w, outfit) {
     if (avgTemp < 15) tips.push({ type:'warning', icon:'🥶', text:`${Math.round(avgTemp)}°C'de etek soğuk tutabilir. Altına kalın tayt giymeni tavsiye ederim.` });
     else if (avgTemp >= 22) tips.push({ type:'success', icon:'✅', text:`Bu sıcak havada etek harika ve serin bir seçim!` });
     if (willRain) tips.push({ type:'warning', icon:'🌧️', text:`Yağmurda etek ıslanması ve rüzgarla birleşince çok rahatsız edebilir.` });
+  } else if (bottom === 'yok') {
+    if (top === 'elbise') tips.push({ type:'success', icon:'✅', text:'Elbise seçiminle alt giyim gerekmemesi tutarlı.' });
+    else tips.push({ type:'danger', icon:'⚠️', text:'Alt giyim seçilmedi. “Elbise için yok” seçeneği yalnızca elbiseyle kullanılmalı.' });
   }
 
   if (shoes === 'sandalet') {
@@ -728,6 +827,41 @@ function analyzeOutfit(w, outfit) {
     if (willRain && rainAmount > 0.3) tips.push({ type:'danger', icon:'💦', text:`Yağmurda loafer çoğunlukla suya dayanmaz. Ayakların ıslanır ve kayabilirsin. Bot veya su geçirmez ayakkabı düşün.` });
     else if (avgTemp < 8) tips.push({ type:'warning', icon:'🌬️', text:`${Math.round(avgTemp)}°C'de loafer soğuk tutabilir. Kalın çorapla kombineleyebilirsin.` });
     else tips.push({ type:'success', icon:'✅', text:`Loafer bu hava için şık ve rahat bir seçim.` });
+  } else if (shoes === 'waterproof') {
+    if (willRain) tips.push({ type:'success', icon:'✅', text:'Su geçirmez ayakkabı yağış için çok uygun; ayakların kuru kalacak.' });
+    else if (maxTemp >= 28) tips.push({ type:'warning', icon:'🌡️', text:'Su geçirmez ayakkabı bu sıcaklıkta yeterince nefes almayabilir.' });
+    else tips.push({ type:'success', icon:'✅', text:'Su geçirmez ayakkabı değişken hava koşulları için güvenli bir seçim.' });
+  }
+
+  if (outer === 'yagmurluk' && willRain) tips.push({ type:'success', icon:'🌧️', text:'Dış katman olarak yağmurluk seçmen beklenen yağışa tam uyuyor.' });
+  else if (outer === 'yagmurluk' && !willRain) tips.push({ type:'info', icon:'🌂', text:'Yağış beklenmediği için yağmurluğu katlayıp yanında taşıyabilirsin.' });
+  if (['mont', 'kaban'].includes(outer) && maxTemp >= 20) tips.push({ type:'warning', icon:'🔥', text:`${Math.round(maxTemp)}°C'de ${outer} fazla sıcak gelebilir.` });
+  if (outer === 'yok' && minTemp < 10 && !['mont', 'yagmurluk'].includes(top)) tips.push({ type:'warning', icon:'🧥', text:'En düşük sıcaklık için bir dış katman eklemen daha güvenli olur.' });
+  if (willRain && !accessories.includes('umbrella') && outer !== 'yagmurluk' && top !== 'yagmurluk') {
+    tips.push({ type:'warning', icon:'☂️', text:'Yağış bekleniyor; şemsiye veya yağmurluk ekle.' });
+  }
+  if (willRain && accessories.includes('umbrella')) tips.push({ type:'success', icon:'☂️', text:'Şemsiye seçimin beklenen yağışa karşı hazırlıklı olduğunu gösteriyor.' });
+
+  if (uvIndex >= 6 && !accessories.includes('hat')) tips.push({ type:'warning', icon:'☀️', text:`UV indeksi ${uvIndex.toFixed(1)}. Şapka ve güneş koruyucu kullan.` });
+  else if (uvIndex >= 6 && accessories.includes('hat')) tips.push({ type:'success', icon:'🧢', text:`Yüksek UV (${uvIndex.toFixed(1)}) için şapka iyi bir önlem.` });
+  if (humidity >= 75 && maxTemp >= 24) tips.push({ type:'warning', icon:'💧', text:`Nem %${humidity}; nefes alan, bol ve açık renkli kumaşlar tercih et.` });
+  if (windGust >= 45) tips.push({ type:'danger', icon:'🌬️', text:`Rüzgâr hamleleri ${Math.round(windGust)} km/sa seviyesine çıkabilir; bol ve uçuşan parçalara dikkat et.` });
+
+  if (minTemp < 8 && accessories.includes('thermal')) tips.push({ type:'success', icon:'♨️', text:'Termal içlik düşük sıcaklıkta ısı dengesini destekler.' });
+  if (minTemp < 5 && !accessories.includes('gloves')) tips.push({ type:'info', icon:'🧤', text:'Soğuk saatler için eldiven eklemeyi düşün.' });
+  if (minTemp < 8 && !accessories.includes('scarf')) tips.push({ type:'info', icon:'🧣', text:'Atkı, soğuk ve rüzgârda boyun bölgesini korur.' });
+
+  if (sensitivity === 'cold' && avgTemp < 20 && outer === 'yok' && !accessories.includes('thermal')) {
+    tips.push({ type:'warning', icon:'🥶', text:'Çabuk üşüdüğünü belirttin; bir dış katman veya termal içlik ekle.' });
+  }
+  if (sensitivity === 'hot' && avgTemp >= 20 && (['kazak', 'mont'].includes(top) || ['mont', 'kaban'].includes(outer))) {
+    tips.push({ type:'warning', icon:'🥵', text:'Çabuk terlediğini belirttin; daha hafif ve çıkarılabilir katmanlar seç.' });
+  }
+  if (['walking', 'sport'].includes(activity) && maxTemp >= 24 && ['kazak', 'mont', 'sweatshirt'].includes(top)) {
+    tips.push({ type:'warning', icon:'🏃', text:'Hareket seviyen vücut ısısını artıracak; daha hafif bir üst tercih et.' });
+  }
+  if (activity === 'vehicle' && minTemp < 12) {
+    tips.push({ type:'info', icon:'🚗', text:'Araç ağırlıklı planda çıkarılabilir katmanlar iç-dış sıcaklık farkını yönetmeyi kolaylaştırır.' });
   }
 
   if (windSpeed > 40) tips.push({ type:'danger', icon:'🌪️', text:`Çok şiddetli rüzgar uyarısı: ${Math.round(windSpeed)} km/sa! Dışarıda çok dikkatli ol.` });
@@ -742,7 +876,7 @@ function analyzeOutfit(w, outfit) {
   const warningCount = tips.filter(t => t.type === 'warning').length;
 
   let verdict;
-  if (dangerCount >= 2) verdict = { cls: 'bad', emoji: '😬', text: 'Bu kombinasyon bugünkü hava için pek uygun değil. Birkaç değişiklik yapmanı öneririm.' };
+  if (dangerCount >= 2) verdict = { cls: 'bad', emoji: '😬', text: 'Bu kombinasyon seçtiğin zaman aralığı için pek uygun değil. Birkaç değişiklik yapmanı öneririm.' };
   else if (dangerCount === 1 || warningCount >= 3) verdict = { cls: 'ok', emoji: '🤔', text: 'Geçerli bir seçim ama bazı noktalara dikkat etmeni tavsiye ederim.' };
   else if (warningCount >= 1) verdict = { cls: 'ok', emoji: '👍', text: 'Genel olarak iyi gidiyorsun! Küçük detayları göz önünde bulundur.' };
   else verdict = { cls: 'good', emoji: '🎉', text: 'Harika seçimler! Bu hava için kıyafetin tam uygun. Güzel bir gün geçir!' };
@@ -764,6 +898,9 @@ function renderResults(w, analysis) {
     { label: `Min ${Math.round(w.minTemp)}°` },
     { label: `Maks ${Math.round(w.maxTemp)}°` },
     { label: `💨 ${Math.round(w.windSpeed)} km/sa` },
+    { label: `🌬️ Hamle ${Math.round(w.windGust)} km/sa` },
+    { label: `💧 Nem %${w.humidity}` },
+    { label: `☀️ UV ${w.uvIndex.toFixed(1)}` },
     { label: w.willRain ? `☔ %${w.maxRainProb}` : '🌤️ Yağış Yok' },
     { label: `⏰ ${String(state.startHour).padStart(2,'0')}:00–${String(state.endHour).padStart(2,'0')}:00` },
   ];
@@ -776,19 +913,55 @@ function renderResults(w, analysis) {
   });
 
   const outfitMap = {
-    top: { tisort:'👕 Tişört', gomlek:'👔 Gömlek', kazak:'🧶 Kazak', hirka:'🧥 Hırka', mont:'🥼 Mont', yagmurluk:'🌂 Yağmurluk' },
-    bottom: { sort:'🩳 Şort', pantolon:'👖 Pantolon', tayt:'🩱 Tayt', etek:'👗 Etek' },
-    shoes:  { spor:'👟 Spor', bot:'👢 Bot', sandalet:'🩴 Sandalet', loafer:'🥿 Loafer' },
+    top: { tisort:'👕 Tişört', gomlek:'👔 Gömlek', sweatshirt:'🧥 Sweatshirt', kazak:'🧶 Kazak', hirka:'🧥 Hırka', mont:'🥼 Mont', yagmurluk:'🌂 Yağmurluk', elbise:'👗 Elbise' },
+    bottom: { sort:'🩳 Şort', pantolon:'👖 Pantolon', tayt:'🩱 Tayt', etek:'👗 Etek', yok:'➖ Alt giyim yok' },
+    outer: { yok:'➖ Dış katman yok', ceket:'🧥 Ceket', mont:'🥼 Mont', kaban:'🧥 Kaban', yagmurluk:'🌧️ Yağmurluk' },
+    shoes:  { spor:'👟 Spor', bot:'👢 Bot', sandalet:'🩴 Sandalet', loafer:'🥿 Loafer', waterproof:'🥾 Su geçirmez' },
   };
   const summaryEl = document.getElementById('outfit-summary');
   summaryEl.innerHTML = '';
-  ['top','bottom','shoes'].forEach(cat => {
+  ['top','bottom','outer','shoes'].forEach(cat => {
     const val  = state.outfit[cat];
     const name = outfitMap[cat][val] || val;
     const tag  = document.createElement('span');
     tag.className = 'summary-tag';
     tag.textContent = name;
     summaryEl.appendChild(tag);
+  });
+  const accessoryNames = {
+    umbrella:'☂️ Şemsiye', hat:'🧢 Şapka', scarf:'🧣 Atkı',
+    gloves:'🧤 Eldiven', thermal:'♨️ Termal içlik',
+  };
+  state.outfit.accessories.forEach(value => {
+    const tag = document.createElement('span');
+    tag.className = 'summary-tag';
+    tag.textContent = accessoryNames[value] || value;
+    summaryEl.appendChild(tag);
+  });
+
+  const metrics = [
+    ['Sıcaklık aralığı', `${Math.round(w.minTemp)}–${Math.round(w.maxTemp)}°C`],
+    ['Hissedilen', `${Math.round(w.feelsLike)}°C`],
+    ['Yağış', w.willRain ? `%${w.maxRainProb} · ${w.rainAmount.toFixed(1)} mm` : 'Beklenmiyor'],
+    ['Nem', `%${w.humidity}`],
+    ['Rüzgâr / hamle', `${Math.round(w.windSpeed)} / ${Math.round(w.windGust)} km/sa`],
+    ['UV indeksi', w.uvIndex.toFixed(1)],
+    ['Hassasiyet', { cold:'Çabuk üşür', balanced:'Dengeli', hot:'Çabuk terler' }[state.sensitivity]],
+    ['Aktivite', { vehicle:'Araç ağırlıklı', normal:'Normal', walking:'Uzun yürüyüş', sport:'Spor' }[state.activity]],
+  ];
+  const metricsEl = document.getElementById('decision-metrics');
+  metricsEl.replaceChildren();
+  metrics.forEach(([label, value]) => {
+    const card = document.createElement('div');
+    card.className = 'metric-card';
+    const labelEl = document.createElement('span');
+    labelEl.className = 'metric-label';
+    labelEl.textContent = label;
+    const valueEl = document.createElement('strong');
+    valueEl.className = 'metric-value';
+    valueEl.textContent = value;
+    card.append(labelEl, valueEl);
+    metricsEl.appendChild(card);
   });
 
   const listEl = document.getElementById('advice-list');
@@ -829,7 +1002,10 @@ async function runAnalysis() {
     const meta = getWeatherMeta(w.weatherCode);
     applyTheme(meta.theme);
     
-    const analysis = analyzeOutfit(w, state.outfit);
+    const analysis = analyzeOutfit(w, state.outfit, {
+      sensitivity: state.sensitivity,
+      activity: state.activity,
+    });
     renderResults(w, analysis);
     
     hideLoading();
@@ -843,7 +1019,7 @@ async function runAnalysis() {
 }
 
 function resetApp() {
-  state.outfit = { top: null, bottom: null, shoes: null };
+  state.outfit = { top: null, bottom: null, outer: 'yok', shoes: null, accessories: [] };
   state.weather = null;
   document.querySelectorAll('.outfit-btn.selected').forEach(b => {
     b.classList.remove('selected');
@@ -854,6 +1030,16 @@ function resetApp() {
     el.textContent = '';
     el.classList.remove('done');
   });
+  const outerButton = document.querySelector('.outfit-btn[data-cat="outer"][data-val="yok"]');
+  outerButton.classList.add('selected');
+  outerButton.setAttribute('aria-pressed', 'true');
+  document.getElementById('badge-outer').textContent = '✓ Yok';
+  document.querySelectorAll('.accessory-btn').forEach(button => {
+    button.classList.remove('selected');
+    button.setAttribute('aria-pressed', 'false');
+  });
+  document.getElementById('badge-accessories').textContent = 'İsteğe bağlı';
+  document.getElementById('badge-accessories').classList.remove('done');
   document.getElementById('btn-analyze').disabled = true;
   document.getElementById('bottom-sheet').classList.remove('visible');
   applyTheme('default');
@@ -995,9 +1181,15 @@ if (typeof document !== 'undefined') {
 document.addEventListener('DOMContentLoaded', () => {
   populateTimeSelects();
   initDateSelection();
+  initProfileSelection();
   initCitySelection();
   initOutfitSelection();
-  document.querySelectorAll('.outfit-btn').forEach(btn => btn.setAttribute('aria-pressed', 'false'));
+  initAccessorySelection();
+  document.querySelectorAll('.outfit-btn').forEach(btn => {
+    const selected = state.outfit[btn.dataset.cat] === btn.dataset.val;
+    btn.classList.toggle('selected', selected);
+    btn.setAttribute('aria-pressed', String(selected));
+  });
   restorePreferences();
   document.querySelectorAll('.screen').forEach(screen => {
     const active = screen.classList.contains('active');

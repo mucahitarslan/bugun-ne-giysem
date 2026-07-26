@@ -7,7 +7,10 @@ Türkiye'deki 81 il için saatlik hava tahminini seçilen kıyafetlerle karşıl
 - Bugün, yarın veya ertesi gün için saat aralığına göre analiz
 - 81 il, OpenStreetMap tabanlı ilçe/yer araması ve isteğe bağlı cihaz konumu
 - Sıcaklık, hissedilen sıcaklık, yağış ve rüzgâr değerlendirmesi
-- Üst giyim, alt giyim ve ayakkabı için kural tabanlı öneriler
+- Nem, UV indeksi ve rüzgâr hamlesi değerlendirmesi
+- Üst/alt giyim, dış katman, ayakkabı ve aksesuarlar için kural tabanlı öneriler
+- Çabuk üşüme/terleme hassasiyeti ve aktivite seviyesine göre kişiselleştirme
+- Sonuçta tavsiyelerin dayandığı sekiz karar ölçütünün açık gösterimi
 - Android ve iOS ana ekran kurulumu
 - Çevrimdışı açılabilen uygulama kabuğu
 - Son şehir, saat ve kıyafet tercihlerinin cihazda saklanması

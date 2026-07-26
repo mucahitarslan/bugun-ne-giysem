@@ -314,8 +314,18 @@ body {
   margin: 0 20px 14px;
 }
 .date-options { grid-template-columns: repeat(3, 1fr); }
+.profile-options,
+.activity-options {
+  display: grid;
+  gap: 8px;
+  margin: 0 20px 14px;
+}
+.profile-options { grid-template-columns: repeat(3, 1fr); }
+.activity-options { grid-template-columns: repeat(2, 1fr); }
 .mode-btn,
-.date-btn {
+.date-btn,
+.profile-btn,
+.activity-btn {
   border: 1px solid rgba(255,255,255,0.35);
   border-radius: var(--r-md);
   padding: 11px 8px;
@@ -327,7 +337,9 @@ body {
   cursor: pointer;
 }
 .mode-btn.selected,
-.date-btn.selected {
+.date-btn.selected,
+.profile-btn.selected,
+.activity-btn.selected {
   background: #fff;
   color: var(--clr-dark);
 }
@@ -415,6 +427,29 @@ body {
 .o-emoji { display: block; font-size: 2rem; margin-bottom: 6px; line-height: 1; }
 .o-name { display: block; font-size: 0.68rem; font-weight: 600; color: var(--clr-dark); line-height: 1.2; }
 
+.accessory-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 0 20px;
+}
+.accessory-btn {
+  border: 2px solid transparent;
+  border-radius: var(--r-md);
+  padding: 12px 8px;
+  background: var(--card-bg);
+  color: var(--clr-dark);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.accessory-btn.selected {
+  border-color: #fff;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(0,0,0,0.15);
+}
+
 .result-inner { display: flex; flex-direction: column; min-height: 100%; }
 
 .weather-hero { position: relative; flex-shrink: 0; text-align: center; padding: 80px 20px 36px; }
@@ -453,6 +488,20 @@ body {
 .summary-tag {
   background: #F5F5FA; border-radius: var(--r-sm); padding: 6px 12px; font-size: 0.82rem; font-weight: 600; color: var(--clr-mid); display: flex; align-items: center; gap: 5px;
 }
+
+.decision-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.metric-card {
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  background: #F5F5FA;
+}
+.metric-label { display: block; color: var(--clr-light); font-size: 0.68rem; margin-bottom: 3px; }
+.metric-value { display: block; color: var(--clr-dark); font-size: 0.85rem; font-weight: 700; }
 
 .advice-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 
