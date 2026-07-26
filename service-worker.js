@@ -1,52 +1,64 @@
-const CACHE_NAME = 'negiysem-cache-v2'; // Önbelleği yenilemek için v2 yaptık
-const urlsToCache = [
+const CACHE_NAME = 'negiysem-static-v3';
+const APP_SHELL = [
   './',
   './index.html',
   './style.css',
   './app.js',
+  './manifest.json',
+  './logo.svg',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
 ];
 
-// Yükleme (Install)
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(urlsToCache);
-      })
-  );
-  self.skipWaiting(); // Yeni versiyona hemen geçiş yap
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)));
+  self.skipWaiting();
 });
 
-// Eski önbellekleri temizleme (Activate)
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName); // Eski cache silinir
-          }
-        })
-      );
-    })
+    caches.keys()
+      .then(names => Promise.all(
+        names.filter(name => name !== CACHE_NAME).map(name => caches.delete(name))
+      ))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Fetch (Ağ İsteklerini Yönetme)
 self.addEventListener('fetch', event => {
-  // EĞER İSTEK DIŞ API'YE GİDİYORSA SERVICE WORKER ARAYA GİRMESİN
-  if (event.request.url.includes('api.open-meteo.com')) {
-    return; // Doğrudan internetten çekmesine izin ver
+  const { request } = event;
+  const url = new URL(request.url);
+
+  if (request.method !== 'GET' || url.origin !== self.location.origin) {
+    return;
   }
 
-  // Diğer dosyalarımız için önbelleği (cache) kullan
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          const copy = response.clone();
+          event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put('./index.html', copy)));
+          return response;
+        })
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        return response || fetch(event.request);
-      })
+    caches.match(request).then(cached => {
+      const networkResponse = fetch(request)
+        .then(response => {
+          if (response.ok) {
+            const copy = response.clone();
+            event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put(request, copy)));
+          }
+          return response;
+        })
+        .catch(() => cached);
+
+      return cached || networkResponse;
+    })
   );
 });

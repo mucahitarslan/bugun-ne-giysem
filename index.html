@@ -10,7 +10,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20">
+    <link rel="stylesheet" href="style.css">
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-status-bar" content="#764ba2">
@@ -202,20 +202,7 @@
             <button id="btn-close-ios-modal" style="width: 100%; padding: 12px; background: #F4F4F8; color: var(--clr-dark); border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Anladım</button>
         </div>
     </div>
-<script src="app.js?v=20"></script>
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js')
-        .then(registration => {
-          console.log('Service Worker başarıyla kaydedildi!', registration.scope);
-        })
-        .catch(err => {
-          console.log('Service Worker kaydı başarısız oldu: ', err);
-        });
-    });
-  }
-</script>
+<script src="app.js"></script>
 
 </body>
 </html>

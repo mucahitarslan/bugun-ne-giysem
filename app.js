@@ -566,27 +566,32 @@ function resetApp() {
   const btnCloseOsSelect = document.getElementById('btn-close-os-select');
   const btnCloseIosModal = document.getElementById('btn-close-ios-modal');
 
-  let deferredPrompt;
+  let deferredPrompt = null;
+  const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
 
-  // Android Chrome: Pop-up tetiklendiğinde arka planda yakala ve bekle
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
+    if (installBtn && !isStandalone()) installBtn.hidden = false;
   });
 
-  // Uygulamanın zaten PWA olarak mı çalıştığını kontrol et
-  const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  const isStandalone = () => (
+    window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true
+  );
 
-  // Eğer uygulama tarayıcıdan açılmışsa İndir butonunu %100 göster
-  if (!isStandalone() && installBtn) {
-    installBtn.style.display = 'block';
+  if (installBtn) {
+    installBtn.hidden = isStandalone() || !isIos;
   }
 
-  // 1. Ana İndir Butonuna Tıklanınca OS Seçim Ekranını (Flex olarak) aç
   if (installBtn) {
     installBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (osSelectModal) osSelectModal.style.display = 'flex';
+      if (isIos) {
+        if (iosInstructionsModal) iosInstructionsModal.style.display = 'flex';
+      } else if (deferredPrompt) {
+        if (osSelectModal) osSelectModal.style.display = 'flex';
+      }
     });
   }
 
@@ -598,7 +603,7 @@ function resetApp() {
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
-          if (installBtn) installBtn.style.display = 'none'; // Kurulursa butonu gizle
+          if (installBtn) installBtn.hidden = true;
         }
         deferredPrompt = null;
         if (osSelectModal) osSelectModal.style.display = 'none'; // Menüyü kapat
@@ -625,6 +630,21 @@ function resetApp() {
   if (btnCloseIosModal) {
     btnCloseIosModal.addEventListener('click', () => iosInstructionsModal.style.display = 'none');
   }
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    if (installBtn) installBtn.hidden = true;
+    if (osSelectModal) osSelectModal.style.display = 'none';
+  });
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js').catch(error => {
+        console.error('Service Worker kaydı başarısız:', error);
+      });
+    });
+  }
+
 document.addEventListener('DOMContentLoaded', () => {
   populateTimeSelects();
   initCitySelection();
