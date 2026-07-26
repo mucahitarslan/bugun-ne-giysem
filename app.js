@@ -218,15 +218,62 @@ function updateCategoryBadge(cat, name) {
 
 async function fetchWeather() {
   const { lat, lon } = state;
-  // timezone=auto yerine Europe/Istanbul sabitlemesi yapıldı.
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,windspeed_10m,weathercode&timezone=Europe%2FIstanbul&forecast_days=1`;
+  const params = new URLSearchParams({
+    latitude: lat,
+    longitude: lon,
+    hourly: [
+      'temperature_2m',
+      'apparent_temperature',
+      'precipitation_probability',
+      'precipitation',
+      'wind_speed_10m',
+      'weather_code',
+    ].join(','),
+    timezone: 'Europe/Istanbul',
+    forecast_days: '1',
+  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-  const res = await fetch(url);
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`HTTP ${res.status}: ${errorText}`);
+  try {
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) {
+      throw new Error(`Hava durumu servisi ${res.status} koduyla yanıt verdi.`);
+    }
+    const data = await res.json();
+    validateWeatherResponse(data);
+    return data;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Hava durumu servisi zaman aşımına uğradı.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return await res.json();
+}
+
+function validateWeatherResponse(raw) {
+  const requiredFields = [
+    'time',
+    'temperature_2m',
+    'apparent_temperature',
+    'precipitation_probability',
+    'precipitation',
+    'wind_speed_10m',
+    'weather_code',
+  ];
+  const expectedLength = raw?.hourly?.time?.length;
+  const isValid = expectedLength > 0 && requiredFields.every(field => (
+    Array.isArray(raw.hourly[field]) && raw.hourly[field].length === expectedLength
+  ));
+
+  if (!isValid) {
+    throw new Error('Saatlik hava durumu verileri eksik veya tutarsız.');
+  }
 }
 
 function filterHourlyData(raw) {
@@ -245,8 +292,8 @@ function filterHourlyData(raw) {
   const feelsLikes  = indices.map(i => raw.hourly.apparent_temperature[i]);
   const rainProbs   = indices.map(i => raw.hourly.precipitation_probability[i]);
   const rainAmounts = indices.map(i => raw.hourly.precipitation[i]);
-  const winds       = indices.map(i => raw.hourly.windspeed_10m[i]);
-  const codes       = indices.map(i => raw.hourly.weathercode[i]);
+  const winds       = indices.map(i => raw.hourly.wind_speed_10m[i]);
+  const codes       = indices.map(i => raw.hourly.weather_code[i]);
   const midCode     = codes[Math.floor(codes.length / 2)];
 
   return {
@@ -312,7 +359,7 @@ function analyzeOutfit(w, outfit) {
     else if (avgTemp >= 22 && avgTemp < 28) tips.push({ type:'success', icon:'✅', text:`${Math.round(avgTemp)}°C'de tişört rahat bir seçim. Gün içinde hafif serinlerse ince bir ceket de alabilirsin.` });
     else if (avgTemp >= 16 && avgTemp < 22) tips.push({ type:'warning', icon:'⚠️', text:`${Math.round(avgTemp)}°C biraz serin. Tişörtle üşüyebilirsin, üstüne ince bir şey alman önerilir.` });
     else if (avgTemp < 16) tips.push({ type:'danger', icon:'🥶', text:`Hava ${Math.round(avgTemp)}°C. Sadece tişörtle çıkmak çok soğuk hissettirebilir. Üstüne kat kat giyinmeyi düşün.` });
-    if (willRain) tips.push({ type:'warning', icon:'🌧️', text:`Yağmur bekleniyor (%${maxRainProb}). Tişört ıslandığında soğuk hissettireceğinden bir yağmurluk veya mont yanına alsana.` });
+    if (willRain) tips.push({ type:'warning', icon:'🌧️', text:`Yağmur bekleniyor (%${maxRainProb}). Tişört ıslandığında soğuk hissettireceğinden yanına bir yağmurluk veya mont al.` });
   } else if (top === 'gomlek') {
     if (maxTemp >= 28) tips.push({ type:'warning', icon:'🌡️', text:`${Math.round(maxTemp)}°C'de gömlek sıcak tutabilir. Keten veya ince kumaş tercih et; yoksa bunalırsın.` });
     else if (avgTemp >= 16 && avgTemp < 28) tips.push({ type:'success', icon:'✅', text:`Gömlek bu hava için şık ve uygun bir seçim.` });
@@ -336,7 +383,7 @@ function analyzeOutfit(w, outfit) {
     else tips.push({ type:'success', icon:'🧊', text:`Dondurucu hava için mont şart. İyi ki giymişsin!` });
     if (willRain && rainAmount > 1) tips.push({ type:'info', icon:'💡', text:`Su geçirmez bir mont seçtiysen yağmurda da koruyacak. Değilse şemsiye al.` });
   } else if (top === 'yagmurluk') {
-    if (!willRain && maxRainProb < 30) tips.push({ type:'warning', icon:'🌂', text:`Hava durumu yağmur öngörmüyor (%${maxRainProb} ihtimal). Yağmurluk gereksiz ağırlık olabilir, ama yanına almak istersek sorun değil.` });
+    if (!willRain && maxRainProb < 30) tips.push({ type:'warning', icon:'🌂', text:`Hava durumu yağmur öngörmüyor (%${maxRainProb} ihtimal). Yağmurluk gereksiz ağırlık olabilir, ama yanına almak istersen sorun değil.` });
     else if (willRain) tips.push({ type:'success', icon:'✅', text:`Harika karar! Yağmur bekleniyor (%${maxRainProb}) ve yağmurluk tam olarak ihtiyacın olan şey.` });
     if (avgTemp < 8) tips.push({ type:'warning', icon:'🥶', text:`Yağmurluk rüzgar ve soğuktan tam korumayabilir. Altına kalın katlar giy.` });
   }
@@ -368,8 +415,8 @@ function analyzeOutfit(w, outfit) {
   if (shoes === 'sandalet') {
     if (maxTemp >= 24 && !willRain && windSpeed < 20) tips.push({ type:'success', icon:'✅', text:`Sandalet bu sıcak ve güzel hava için mükemmel! Ayakların nefes alacak.` });
     else if (maxTemp >= 24 && willRain) tips.push({ type:'danger', icon:'☔', text:`Yağmur var ve sandalet giyiyorsun — ayakların tamamen ıslanır. Bot veya su geçirmez ayakkabı çok daha iyi olur.` });
+    else if (avgTemp < 14) tips.push({ type:'danger', icon:'🥶', text:`Bu soğuk havada (${Math.round(avgTemp)}°C) sandaletle ayakların çok üşür. Lütfen kapalı ayakkabı giy.` });
     else if (avgTemp < 18) tips.push({ type:'warning', icon:'🌡️', text:`${Math.round(avgTemp)}°C'de sandalet ayaklarını üşütebilir. Kapalı burunlu bir ayakkabı daha iyi seçim.` });
-    else if (avgTemp < 14) tips.push({ type:'danger', icon:'🥶', text:`Bu soğuk havada (${Math.round(avgTemp)}°C) sandaletle ayaklarının donacak. Lütfen kapalı ayakkabı giy.` });
   } else if (shoes === 'bot') {
     if (maxTemp >= 28) tips.push({ type:'danger', icon:'🔥', text:`${Math.round(maxTemp)}°C'de bot giymek ayaklarının şişmesine ve terlemesine neden olur. Çok bunalırsın.` });
     else if (avgTemp >= 22 && avgTemp < 28) tips.push({ type:'warning', icon:'🌡️', text:`Biraz sıcak (${Math.round(avgTemp)}°C) bot için. Nefes almayan bir bot ise ayakların çok terleyecek.` });
@@ -377,7 +424,7 @@ function analyzeOutfit(w, outfit) {
     else if (avgTemp < 10) tips.push({ type:'success', icon:'✅', text:`Bu soğuk havada (${Math.round(avgTemp)}°C) bot ayaklarını sıcak tutacak. İyi seçim!` });
     else tips.push({ type:'success', icon:'✅', text:`Bot bu hava için uygun ve pratik bir seçim.` });
   } else if (shoes === 'spor') {
-    if (willRain && rainAmount > 0.5) tips.push({ type:'warning', icon:'💧', text:`Yağmur bekleniyor ve çoğu spor ayakkabı su geçirir. Ayakların ıslanabilir; su geçirmez modeliniz varsa onu seç.` });
+    if (willRain && rainAmount > 0.5) tips.push({ type:'warning', icon:'💧', text:`Yağmur bekleniyor ve çoğu spor ayakkabı su geçirir. Ayakların ıslanabilir; su geçirmez modelin varsa onu seç.` });
     else if (avgTemp < 5) tips.push({ type:'warning', icon:'🥶', text:`Çok soğuk için spor ayakkabı yeterince sıcak tutmayabilir. İçi kürklü veya termal çorapla destekle.` });
     else if (maxTemp >= 30) tips.push({ type:'success', icon:'✅', text:`Bu sıcakta nefes alan spor ayakkabı iyi bir seçim. Açık renk tercih et.` });
     else tips.push({ type:'success', icon:'✅', text:`Spor ayakkabı her hava için güvenli ve konforlu bir tercih.` });
@@ -412,7 +459,7 @@ function renderResults(w, analysis) {
 
   document.getElementById('result-icon').textContent = meta.icon;
   document.getElementById('result-temp').textContent = `${Math.round(w.avgTemp)}°C`;
-  document.getElementById('result-desc').textContent = `${meta.label} · Hissedilen ${Math.round(w.feelsLike)}°C`;
+  document.getElementById('result-desc').textContent = `${state.locationName} · ${meta.label} · Hissedilen ${Math.round(w.feelsLike)}°C`;
 
   const badgesEl = document.getElementById('result-badges');
   badgesEl.innerHTML = '';
@@ -490,8 +537,7 @@ async function runAnalysis() {
   } catch (err) {
     hideLoading();
     console.error('HATA DETAYI:', err);
-    // Gerçek hatayı ekrana basıyoruz!
-    showToast('HATA: ' + err.message);
+    showToast(err.message || 'Hava durumu alınamadı. Lütfen tekrar deneyin.');
   }
 }
 
