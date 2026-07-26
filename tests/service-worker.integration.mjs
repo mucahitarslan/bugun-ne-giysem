@@ -68,6 +68,16 @@ try {
   await page.route('https://api.open-meteo.com/v1/forecast?**', route => (
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(forecastFixture()) })
   ));
+  await page.route('https://nominatim.openstreetmap.org/reverse?**', route => (
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        name: 'Fatih',
+        address: { town: 'Fatih', province: 'İstanbul' },
+      }),
+    })
+  ));
 
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
   await page.locator('#btn-start').focus();
@@ -86,7 +96,8 @@ try {
   await page.getByRole('button', { name: '🏃 Spor' }).click();
   assert.equal(await page.locator('.date-btn[data-day="2"]').getAttribute('aria-pressed'), 'true');
   await page.getByRole('button', { name: '📍 Konumumu kullan' }).click();
-  await assert.doesNotReject(() => page.getByText('Mevcut konum seçildi.').waitFor({ state: 'visible' }));
+  await assert.doesNotReject(() => page.getByText('Fatih, İstanbul seçildi.').waitFor({ state: 'visible' }));
+  assert.equal(await page.locator('#district-query').inputValue(), 'Fatih, İstanbul');
   assert.equal(await page.getByRole('button', { name: 'Kıyafet Seç →' }).isEnabled(), true);
   assert.equal(await page.locator('#screen-loading').getAttribute('aria-hidden'), 'true');
   assert.equal(await page.locator('#screen-1').getAttribute('aria-hidden'), 'false');
@@ -126,7 +137,7 @@ try {
   assert.equal(await page.locator('#btn-start').isVisible(), true);
 
   const cachedAssets = await page.evaluate(async () => {
-    const cache = await caches.open('negiysem-static-v5');
+    const cache = await caches.open('negiysem-static-v6');
     const keys = await cache.keys();
     return keys.map(request => new URL(request.url).pathname);
   });

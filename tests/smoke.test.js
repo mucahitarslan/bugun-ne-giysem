@@ -68,6 +68,8 @@ test('üç günlük tahmin, konum seçenekleri ve veri atıfları arayüzde bulu
   assert.match(html, /id="district-query"/);
   assert.match(html, /Open-Meteo/);
   assert.match(html, /OpenStreetMap/);
+  assert.match(app, /nominatim\.openstreetmap\.org\/reverse/);
+  assert.match(app, /reverseGeocode/);
 });
 
 test('modallar erişilebilir diyalog semantiğine sahiptir', () => {

@@ -454,6 +454,35 @@ async function searchDistricts() {
   }
 }
 
+async function reverseGeocode(lat, lon) {
+  const params = new URLSearchParams({
+    lat: String(lat),
+    lon: String(lon),
+    format: 'jsonv2',
+    zoom: '12',
+    addressdetails: '1',
+    'accept-language': 'tr',
+  });
+  const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`, {
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error('Konum adı belirlenemedi.');
+
+  const data = await response.json();
+  const address = data.address || {};
+  const district = address.town
+    || address.municipality
+    || address.city_district
+    || address.district
+    || address.county
+    || address.city;
+  const province = address.province || address.state || address.city;
+  const parts = [district, province].filter((value, index, values) => (
+    value && values.indexOf(value) === index
+  ));
+  return parts.join(', ') || data.name || 'Mevcut konum';
+}
+
 function useCurrentLocation() {
   if (!navigator.geolocation) {
     showToast('Tarayıcınız konum özelliğini desteklemiyor.');
@@ -465,11 +494,19 @@ function useCurrentLocation() {
   button.disabled = true;
   button.textContent = '📍 Konum alınıyor…';
   navigator.geolocation.getCurrentPosition(
-    position => {
-      setLocation(position.coords.latitude, position.coords.longitude, 'Mevcut konum');
+    async position => {
+      const { latitude, longitude } = position.coords;
+      let locationName = 'Mevcut konum';
+      try {
+        locationName = await reverseGeocode(latitude, longitude);
+      } catch {
+        // Koordinatlar kullanılabilir; yalnızca okunabilir konum adı alınamadı.
+      }
+      setLocation(latitude, longitude, locationName);
+      document.getElementById('district-query').value = locationName;
       button.disabled = false;
       button.textContent = '📍 Konumumu kullan';
-      showToast('Mevcut konum seçildi.');
+      showToast(`${locationName} seçildi.`);
     },
     () => {
       button.disabled = false;
