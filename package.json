@@ -4,9 +4,14 @@
   "private": true,
   "description": "Hava durumuna göre kıyafet uygunluğu analizi yapan PWA",
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "npm run test:unit && npm run test:sw",
+    "test:unit": "node --test tests/*.test.js",
+    "test:sw": "node tests/service-worker.integration.mjs"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "playwright": "1.62.0"
   }
 }

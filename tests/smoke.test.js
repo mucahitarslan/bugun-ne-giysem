@@ -57,3 +57,25 @@ test('tercihler güvenli biçimde tarayıcı depolamasına yazılır', () => {
   assert.match(app, /localStorage\.setItem\(STORAGE_KEY/);
   assert.match(app, /restorePreferences\(\)/);
 });
+
+test('üç günlük tahmin, konum seçenekleri ve veri atıfları arayüzde bulunur', () => {
+  assert.match(app, /forecast_days: '3'/);
+  assert.match(html, /id="date-options"/);
+  assert.match(html, /id="btn-use-location"/);
+  assert.match(html, /id="district-query"/);
+  assert.match(html, /Open-Meteo/);
+  assert.match(html, /OpenStreetMap/);
+});
+
+test('modallar erişilebilir diyalog semantiğine sahiptir', () => {
+  assert.equal((html.match(/role="dialog"/g) || []).length, 2);
+  assert.equal((html.match(/aria-modal="true"/g) || []).length, 2);
+  assert.doesNotMatch(html, /style="/);
+  assert.match(app, /handleModalKeyboard/);
+});
+
+test('hava verisi için sınırlı süreli çevrimdışı fallback bulunur', () => {
+  assert.match(app, /WEATHER_CACHE_MAX_AGE/);
+  assert.match(app, /getCachedWeatherResponse/);
+  assert.match(app, /Son kayıtlı tahmin/);
+});
