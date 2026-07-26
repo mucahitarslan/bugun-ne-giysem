@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#764ba2">
@@ -102,12 +102,12 @@
                 <span class="cat-sel-badge" id="badge-top"></span>
             </div>
             <div class="outfit-grid" id="grid-top">
-                <div class="outfit-btn" data-cat="top" data-val="tisort"><span class="o-emoji">👕</span><span class="o-name">Tişört</span></div>
-                <div class="outfit-btn" data-cat="top" data-val="gomlek"><span class="o-emoji">👔</span><span class="o-name">Gömlek</span></div>
-                <div class="outfit-btn" data-cat="top" data-val="kazak"><span class="o-emoji">🧶</span><span class="o-name">Kazak</span></div>
-                <div class="outfit-btn" data-cat="top" data-val="hirka"><span class="o-emoji">🧥</span><span class="o-name">Hırka</span></div>
-                <div class="outfit-btn" data-cat="top" data-val="mont"><span class="o-emoji">🥼</span><span class="o-name">Mont</span></div>
-                <div class="outfit-btn" data-cat="top" data-val="yagmurluk"><span class="o-emoji">🌂</span><span class="o-name">Yağmurluk</span></div>
+                <button type="button" class="outfit-btn" data-cat="top" data-val="tisort"><span class="o-emoji">👕</span><span class="o-name">Tişört</span></button>
+                <button type="button" class="outfit-btn" data-cat="top" data-val="gomlek"><span class="o-emoji">👔</span><span class="o-name">Gömlek</span></button>
+                <button type="button" class="outfit-btn" data-cat="top" data-val="kazak"><span class="o-emoji">🧶</span><span class="o-name">Kazak</span></button>
+                <button type="button" class="outfit-btn" data-cat="top" data-val="hirka"><span class="o-emoji">🧥</span><span class="o-name">Hırka</span></button>
+                <button type="button" class="outfit-btn" data-cat="top" data-val="mont"><span class="o-emoji">🥼</span><span class="o-name">Mont</span></button>
+                <button type="button" class="outfit-btn" data-cat="top" data-val="yagmurluk"><span class="o-emoji">🌂</span><span class="o-name">Yağmurluk</span></button>
             </div>
 
             <div class="cat-header">
@@ -116,10 +116,10 @@
                 <span class="cat-sel-badge" id="badge-bottom"></span>
             </div>
             <div class="outfit-grid" id="grid-bottom">
-                <div class="outfit-btn" data-cat="bottom" data-val="sort"><span class="o-emoji">🩳</span><span class="o-name">Şort</span></div>
-                <div class="outfit-btn" data-cat="bottom" data-val="pantolon"><span class="o-emoji">👖</span><span class="o-name">Pantolon</span></div>
-                <div class="outfit-btn" data-cat="bottom" data-val="tayt"><span class="o-emoji">🩱</span><span class="o-name">Tayt</span></div>
-                <div class="outfit-btn" data-cat="bottom" data-val="etek"><span class="o-emoji">👗</span><span class="o-name">Etek</span></div>
+                <button type="button" class="outfit-btn" data-cat="bottom" data-val="sort"><span class="o-emoji">🩳</span><span class="o-name">Şort</span></button>
+                <button type="button" class="outfit-btn" data-cat="bottom" data-val="pantolon"><span class="o-emoji">👖</span><span class="o-name">Pantolon</span></button>
+                <button type="button" class="outfit-btn" data-cat="bottom" data-val="tayt"><span class="o-emoji">🩱</span><span class="o-name">Tayt</span></button>
+                <button type="button" class="outfit-btn" data-cat="bottom" data-val="etek"><span class="o-emoji">👗</span><span class="o-name">Etek</span></button>
             </div>
 
             <div class="cat-header">
@@ -128,10 +128,10 @@
                 <span class="cat-sel-badge" id="badge-shoes"></span>
             </div>
             <div class="outfit-grid" id="grid-shoes">
-                <div class="outfit-btn" data-cat="shoes" data-val="spor"><span class="o-emoji">👟</span><span class="o-name">Spor</span></div>
-                <div class="outfit-btn" data-cat="shoes" data-val="bot"><span class="o-emoji">👢</span><span class="o-name">Bot</span></div>
-                <div class="outfit-btn" data-cat="shoes" data-val="sandalet"><span class="o-emoji">🩴</span><span class="o-name">Sandalet</span></div>
-                <div class="outfit-btn" data-cat="shoes" data-val="loafer"><span class="o-emoji">🥿</span><span class="o-name">Loafer</span></div>
+                <button type="button" class="outfit-btn" data-cat="shoes" data-val="spor"><span class="o-emoji">👟</span><span class="o-name">Spor</span></button>
+                <button type="button" class="outfit-btn" data-cat="shoes" data-val="bot"><span class="o-emoji">👢</span><span class="o-name">Bot</span></button>
+                <button type="button" class="outfit-btn" data-cat="shoes" data-val="sandalet"><span class="o-emoji">🩴</span><span class="o-name">Sandalet</span></button>
+                <button type="button" class="outfit-btn" data-cat="shoes" data-val="loafer"><span class="o-emoji">🥿</span><span class="o-name">Loafer</span></button>
             </div>
 
             <div class="btn-wrap">
@@ -169,14 +169,14 @@
         </div>
     </div>
 
-    <div class="loading-overlay" id="loading-overlay" hidden>
+    <div class="loading-overlay" id="loading-overlay" role="status" aria-live="polite" hidden>
         <div class="spinner-wrap">
             <div class="spinner"></div>
             <p class="spinner-text" id="spinner-text">Hava durumu alınıyor...</p>
         </div>
     </div>
 
-    <div class="error-toast" id="error-toast" hidden>
+    <div class="error-toast" id="error-toast" role="alert" aria-live="assertive" hidden>
         <span class="toast-icon">⚠️</span>
         <span class="toast-msg" id="toast-msg"></span>
     </div>

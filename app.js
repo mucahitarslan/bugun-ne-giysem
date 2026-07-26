@@ -10,6 +10,65 @@ const state = {
   rawWeather: null,
   weather: null,
 };
+const STORAGE_KEY = 'bugun-ne-giysem-preferences-v1';
+
+function savePreferences() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      locationName: state.locationName,
+      startHour: state.startHour,
+      endHour: state.endHour,
+      outfit: state.outfit,
+    }));
+  } catch {
+    // Gizli mod veya kapalı depolama uygulamanın çalışmasını engellememeli.
+  }
+}
+
+function restorePreferences() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!saved || typeof saved !== 'object') return;
+
+    const cityIndex = TURKISH_CITIES.findIndex(city => city.name === saved.locationName);
+    if (cityIndex >= 0) {
+      const city = TURKISH_CITIES[cityIndex];
+      state.lat = city.lat;
+      state.lon = city.lon;
+      state.locationName = city.name;
+      document.getElementById('city-select').value = String(cityIndex);
+    }
+
+    if (Number.isInteger(saved.startHour) && saved.startHour >= 6 && saved.startHour <= 23) {
+      state.startHour = saved.startHour;
+      document.getElementById('time-start').value = String(saved.startHour);
+    }
+    if (Number.isInteger(saved.endHour) && saved.endHour >= 6 && saved.endHour <= 23) {
+      state.endHour = saved.endHour;
+      document.getElementById('time-end').value = String(saved.endHour);
+    }
+
+    ['top', 'bottom', 'shoes'].forEach(cat => {
+      const val = saved.outfit?.[cat];
+      const button = document.querySelector(`.outfit-btn[data-cat="${cat}"][data-val="${val}"]`);
+      if (!button) return;
+      state.outfit[cat] = val;
+      button.classList.add('selected');
+      button.setAttribute('aria-pressed', 'true');
+      updateCategoryBadge(cat, button.querySelector('.o-name').textContent);
+    });
+
+    const { top, bottom, shoes } = state.outfit;
+    document.getElementById('btn-analyze').disabled = !(top && bottom && shoes);
+    updateDurationTag();
+  } catch {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Depolama tamamen kapalıysa kayıtlı tercihleri yok say.
+    }
+  }
+}
 
 // -- DÜZELTİLMİŞ EKRAN GEÇİŞ FONKSİYONU --
 function goTo(toId, back = false) {
@@ -184,7 +243,8 @@ function initCitySelection() {
     state.lat = selectedCity.lat;
     state.lon = selectedCity.lon;
     state.locationName = selectedCity.name;
-    updateDurationTag(); 
+    updateDurationTag();
+    savePreferences();
   });
 }
 
@@ -196,11 +256,14 @@ function initOutfitSelection() {
 
       document.querySelectorAll(`.outfit-btn[data-cat="${cat}"]`).forEach(b => {
         b.classList.remove('selected');
+        b.setAttribute('aria-pressed', 'false');
       });
 
       btn.classList.add('selected');
+      btn.setAttribute('aria-pressed', 'true');
       state.outfit[cat] = val;
       updateCategoryBadge(cat, btn.querySelector('.o-name').textContent);
+      savePreferences();
 
       const { top, bottom, shoes } = state.outfit;
       document.getElementById('btn-analyze').disabled = !(top && bottom && shoes);
@@ -544,7 +607,10 @@ async function runAnalysis() {
 function resetApp() {
   state.outfit = { top: null, bottom: null, shoes: null };
   state.weather = null;
-  document.querySelectorAll('.outfit-btn.selected').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.outfit-btn.selected').forEach(b => {
+    b.classList.remove('selected');
+    b.setAttribute('aria-pressed', 'false');
+  });
   ['badge-top','badge-bottom','badge-shoes'].forEach(id => {
     const el = document.getElementById(id);
     el.textContent = '';
@@ -553,6 +619,7 @@ function resetApp() {
   document.getElementById('btn-analyze').disabled = true;
   document.getElementById('bottom-sheet').classList.remove('visible');
   applyTheme('default');
+  savePreferences();
   goTo('screen-loading', true);
 }
 
@@ -649,6 +716,8 @@ document.addEventListener('DOMContentLoaded', () => {
   populateTimeSelects();
   initCitySelection();
   initOutfitSelection();
+  document.querySelectorAll('.outfit-btn').forEach(btn => btn.setAttribute('aria-pressed', 'false'));
+  restorePreferences();
 
   document.getElementById('time-start').addEventListener('change', function() {
     state.startHour = parseInt(this.value, 10);
@@ -657,11 +726,13 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('time-end').value = state.endHour;
     }
     updateDurationTag();
+    savePreferences();
   });
 
   document.getElementById('time-end').addEventListener('change', function() {
     state.endHour = parseInt(this.value, 10);
     updateDurationTag();
+    savePreferences();
   });
 
   document.getElementById('btn-start').addEventListener('click', () => {

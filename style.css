@@ -317,6 +317,9 @@ body {
 .outfit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 20px; }
 
 .outfit-btn {
+  width: 100%;
+  font: inherit;
+  color: inherit;
   background: var(--card-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
