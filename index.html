@@ -31,7 +31,7 @@
                 <span>Başlayalım</span>
                 <span class="btn-arrow">→</span>
             </button>
-            <button class="btn-primary" id="btn-install" hidden style="margin-top: 12px; background: #FFD200; color: #1A1A2E;">
+            <button class="btn-primary btn-install" id="btn-install" hidden>
                 <span>📱 Uygulamayı Yükle</span>
             </button>
         </div>
@@ -44,20 +44,37 @@
 
             <div class="screen-header">
                 <span class="step-chip">ADIM 01</span>
-                <h2 class="screen-title">Neredesin,<br>ne zaman çıkıyorsun?</h2>
+                <h2 class="screen-title" tabindex="-1">Neredesin,<br>ne zaman çıkıyorsun?</h2>
+            </div>
+
+            <div class="location-mode" role="group" aria-label="Konum seçim yöntemi">
+                <button type="button" class="mode-btn selected" id="btn-manual-location" aria-pressed="true">🗺️ Manuel seç</button>
+                <button type="button" class="mode-btn" id="btn-use-location" aria-pressed="false">📍 Konumumu kullan</button>
             </div>
 
             <div class="glass-card location-card" id="location-card">
-                <div class="location-status" id="location-status" style="width: 100%;">
+                <div class="location-status" id="location-status">
                     <span class="loc-icon">📍</span>
-                    <div class="loc-info" style="width: 100%;">
+                    <div class="loc-info">
                         <label class="loc-label" for="city-select">Hangi Şehirdesin?</label>
-                        <select class="time-sel" id="city-select" style="width: 100%; margin-top: 6px; text-align: left; padding: 10px;">
+                        <select class="time-sel city-select" id="city-select">
                             <option value="" disabled selected>Şehir seçiniz...</option>
                         </select>
                     </div>
                 </div>
             </div>
+
+            <div class="glass-card district-card" id="district-card">
+                <label class="loc-label" for="district-query">İlçe veya yer adı</label>
+                <div class="district-search-row">
+                    <input id="district-query" class="location-input" type="search" minlength="3" autocomplete="address-level2" placeholder="Örn. Kadıköy">
+                    <button type="button" class="btn-search" id="btn-search-district">Ara</button>
+                </div>
+                <div id="district-results" class="district-results" role="listbox" aria-label="Konum arama sonuçları" hidden></div>
+            </div>
+
+            <div class="section-title">Hangi gün için plan yapıyorsun?</div>
+            <div class="date-options" id="date-options" role="group" aria-label="Tahmin günü"></div>
 
             <div class="section-title">Dışarıda ne zaman olacaksın?</div>
             <div class="glass-card time-card">
@@ -88,10 +105,10 @@
         <div class="screen-inner">
 
             <div class="screen-header with-back">
-                <button class="btn-back" data-target="screen-1" id="btn-back-1">←</button>
+                <button class="btn-back" data-target="screen-1" id="btn-back-1" aria-label="Konum ve saat seçimine geri dön">←</button>
                 <div>
                     <span class="step-chip">ADIM 02</span>
-                    <h2 class="screen-title">Ne giymeyi<br>planlıyorsun?</h2>
+                    <h2 class="screen-title" tabindex="-1">Ne giymeyi<br>planlıyorsun?</h2>
                     <p class="screen-sub">Her kategoriden birini seç</p>
                 </div>
             </div>
@@ -148,7 +165,7 @@
         <div class="screen-inner result-inner">
 
             <div class="weather-hero" id="weather-hero">
-                <button class="btn-back btn-back-white" data-target="screen-2" id="btn-back-2">←</button>
+                <button class="btn-back btn-back-white" data-target="screen-2" id="btn-back-2" aria-label="Kıyafet seçimine geri dön">←</button>
                 <div class="w-icon-big" id="result-icon">☀️</div>
                 <div class="w-temp" id="result-temp">--°</div>
                 <div class="w-desc" id="result-desc">Hava durumu yükleniyor</div>
@@ -164,6 +181,10 @@
                 <button class="btn-restart" id="btn-restart">
                     🔄 Yeniden Başla
                 </button>
+                <p class="data-attribution">
+                    Hava durumu: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>.
+                    Konum araması: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap katkıda bulunanlar</a>.
+                </p>
             </div>
 
         </div>
@@ -183,23 +204,23 @@
 
 </div>
 <!-- 1. İŞLETİM SİSTEMİ SEÇİM EKRANI -->
-    <div id="os-select-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9998; align-items: center; justify-content: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);">
-        <div style="background: var(--card-bg); padding: 24px; border-radius: var(--r-lg); width: 90%; max-width: 320px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
-            <h3 style="margin-bottom: 20px; color: var(--clr-dark); font-family: 'Fraunces', serif;">Cihazınızı Seçin</h3>
-            <button id="btn-select-android" style="width: 100%; padding: 14px; margin-bottom: 12px; background: #3DDC84; color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">🤖 Android</button>
-            <button id="btn-select-ios" style="width: 100%; padding: 14px; margin-bottom: 20px; background: #000; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer;">🍎 iOS (iPhone / iPad)</button>
-            <button id="btn-close-os-select" style="background: transparent; color: var(--clr-mid); border: none; text-decoration: underline; cursor: pointer; font-size: 0.9rem;">İptal</button>
+    <div id="os-select-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="os-modal-title" hidden>
+        <div class="modal-card">
+            <h3 id="os-modal-title" class="modal-title">Cihazınızı Seçin</h3>
+            <button id="btn-select-android" class="modal-action android">🤖 Android</button>
+            <button id="btn-select-ios" class="modal-action ios">🍎 iOS (iPhone / iPad)</button>
+            <button id="btn-close-os-select" class="modal-close">İptal</button>
         </div>
     </div>
 
     <!-- 2. iOS TALİMAT EKRANI -->
-    <div id="ios-instructions-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);">
-        <div style="background: var(--card-bg); padding: 24px; border-radius: var(--r-lg); width: 90%; max-width: 320px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
-            <p style="font-size: 1.3rem; font-family: 'Fraunces', serif; font-weight: 700; margin-bottom: 12px; color: var(--clr-dark);">iPhone'a Yükle</p>
-            <p style="color: var(--clr-mid); margin-bottom: 20px; line-height: 1.5; font-size: 0.95rem;">
+    <div id="ios-instructions-modal" class="modal-overlay modal-ios" role="dialog" aria-modal="true" aria-labelledby="ios-modal-title" hidden>
+        <div class="modal-card">
+            <h3 id="ios-modal-title" class="modal-title">iPhone'a Yükle</h3>
+            <p class="modal-copy">
                 Alt menüdeki <b>Paylaş</b> (kare içinden yukarı ok) simgesine dokunun ve listeden<br><br><b>"Ana Ekrana Ekle"</b> seçeneğini seçin. 📱
             </p>
-            <button id="btn-close-ios-modal" style="width: 100%; padding: 12px; background: #F4F4F8; color: var(--clr-dark); border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Anladım</button>
+            <button id="btn-close-ios-modal" class="modal-confirm">Anladım</button>
         </div>
     </div>
 <script src="app.js"></script>

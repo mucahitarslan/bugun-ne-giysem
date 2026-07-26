@@ -4,12 +4,14 @@ Türkiye'deki 81 il için saatlik hava tahminini seçilen kıyafetlerle karşıl
 
 ## Özellikler
 
-- Şehir ve dışarıda kalınacak saat aralığına göre analiz
+- Bugün, yarın veya ertesi gün için saat aralığına göre analiz
+- 81 il, OpenStreetMap tabanlı ilçe/yer araması ve isteğe bağlı cihaz konumu
 - Sıcaklık, hissedilen sıcaklık, yağış ve rüzgâr değerlendirmesi
 - Üst giyim, alt giyim ve ayakkabı için kural tabanlı öneriler
 - Android ve iOS ana ekran kurulumu
 - Çevrimdışı açılabilen uygulama kabuğu
 - Son şehir, saat ve kıyafet tercihlerinin cihazda saklanması
+- Bağlantı kesildiğinde en fazla üç saatlik son tahminle açıkça işaretlenmiş fallback
 - Klavye ve ekran okuyucu dostu seçim kontrolleri
 
 ## Teknolojiler
@@ -58,11 +60,13 @@ Node.js 18 veya üzeriyle:
 npm test
 ```
 
-Test paketi JavaScript sözdizimini, manifest yapısını, uygulama kabuğu/cache eşleşmesini, erişilebilir seçim kontrollerini ve kritik hava analizi kurallarını kontrol eder.
+Test paketi JavaScript sözdizimini, manifest yapısını, erişilebilir seçim kontrollerini ve kritik hava analizi kurallarını kontrol eder. Ayrıca gerçek Chromium ile Service Worker kurulumu, cache içeriği ve çevrimdışı yeniden yükleme sınanır.
 
 ## Veri ve gizlilik
 
-Seçilen ilin koordinatları hava tahmini almak amacıyla doğrudan Open-Meteo'ya gönderilir. Uygulama hesap oluşturmaz ve sunucu tarafında kişisel veri saklamaz. Tercihler yalnızca kullanıcının tarayıcısındaki `localStorage` alanında tutulur.
+Seçilen konumun koordinatları hava tahmini almak amacıyla doğrudan Open-Meteo'ya gönderilir. İlçe/yer arama metni OpenStreetMap Nominatim servisine gönderilir. “Konumumu kullan” düğmesine basılmadıkça cihaz konum izni istenmez. Uygulama hesap oluşturmaz ve sunucu tarafında kişisel veri saklamaz. Tercihler ve en fazla üç saat kullanılabilen son başarılı hava yanıtı yalnızca kullanıcının tarayıcısındaki `localStorage` alanında tutulur.
+
+Hava verileri [Open-Meteo](https://open-meteo.com/) tarafından CC BY 4.0 koşullarıyla sağlanır. Konum arama verileri © [OpenStreetMap katkıda bulunanlar](https://www.openstreetmap.org/copyright). Bu proje ticari olmayan kullanım için ücretsiz Open-Meteo API uç noktasını kullanır.
 
 ## Lisans
 

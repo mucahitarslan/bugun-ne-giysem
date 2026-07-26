@@ -4,18 +4,25 @@ const state = {
   lat: null,
   lon: null,
   locationName: '',
+  selectedDay: 0,
   startHour: 9,
   endHour: 18,
   outfit: { top: null, bottom: null, shoes: null },
   rawWeather: null,
   weather: null,
+  weatherIsCached: false,
 };
 const STORAGE_KEY = 'bugun-ne-giysem-preferences-v1';
+const WEATHER_CACHE_KEY = 'bugun-ne-giysem-weather-v1';
+const WEATHER_CACHE_MAX_AGE = 3 * 60 * 60 * 1000;
 
 function savePreferences() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       locationName: state.locationName,
+      lat: state.lat,
+      lon: state.lon,
+      selectedDay: state.selectedDay,
       startHour: state.startHour,
       endHour: state.endHour,
       outfit: state.outfit,
@@ -37,8 +44,15 @@ function restorePreferences() {
       state.lon = city.lon;
       state.locationName = city.name;
       document.getElementById('city-select').value = String(cityIndex);
+    } else if (saved.locationName && Number.isFinite(Number(saved.lat)) && Number.isFinite(Number(saved.lon))) {
+      state.lat = String(saved.lat);
+      state.lon = String(saved.lon);
+      state.locationName = saved.locationName;
     }
 
+    if (Number.isInteger(saved.selectedDay) && saved.selectedDay >= 0 && saved.selectedDay <= 2) {
+      state.selectedDay = saved.selectedDay;
+    }
     if (Number.isInteger(saved.startHour) && saved.startHour >= 6 && saved.startHour <= 23) {
       state.startHour = saved.startHour;
       document.getElementById('time-start').value = String(saved.startHour);
@@ -60,6 +74,7 @@ function restorePreferences() {
 
     const { top, bottom, shoes } = state.outfit;
     document.getElementById('btn-analyze').disabled = !(top && bottom && shoes);
+    updateDateSelection();
     updateDurationTag();
   } catch {
     try {
@@ -87,11 +102,20 @@ function goTo(toId, back = false) {
 
   current.classList.remove('active');
   target.classList.add('active');
+  current.setAttribute('aria-hidden', 'true');
+  current.inert = true;
+  target.setAttribute('aria-hidden', 'false');
+  target.inert = false;
 
   current.style.transform = back ? 'translateX(100%)' : 'translateX(-30%)';
   
   setTimeout(() => { 
     current.style.transform = ''; 
+    const heading = target.querySelector('h1, h2, h3');
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus({ preventScroll: true });
+    }
   }, 460);
 }
 
@@ -128,6 +152,48 @@ function populateTimeSelects() {
   updateDurationTag();
 }
 
+function getForecastDate(dayOffset = state.selectedDay) {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + dayOffset);
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+function initDateSelection() {
+  const container = document.getElementById('date-options');
+  const labels = ['Bugün', 'Yarın', 'Ertesi gün'];
+
+  labels.forEach((label, day) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'date-btn';
+    button.dataset.day = String(day);
+    button.setAttribute('aria-pressed', 'false');
+    const dateLabel = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short' })
+      .format(new Date(`${getForecastDate(day)}T12:00:00`));
+    button.textContent = `${label} · ${dateLabel}`;
+    button.addEventListener('click', () => {
+      state.selectedDay = day;
+      updateDateSelection();
+      savePreferences();
+    });
+    container.appendChild(button);
+  });
+  updateDateSelection();
+}
+
+function updateDateSelection() {
+  document.querySelectorAll('.date-btn').forEach(button => {
+    const selected = Number(button.dataset.day) === state.selectedDay;
+    button.classList.toggle('selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+}
+
 function updateDurationTag() {
   const tag = document.getElementById('duration-tag');
   const diff = state.endHour - state.startHour;
@@ -137,7 +203,8 @@ function updateDurationTag() {
     tag.style.color = '#fca5a5';
     document.getElementById('btn-step1-next').disabled = true;
   } else {
-    tag.textContent = `⏱ ${diff} saat dışarıdasın (${String(state.startHour).padStart(2,'0')}:00 – ${String(state.endHour).padStart(2,'0')}:00)`;
+    const dayLabel = ['Bugün', 'Yarın', 'Ertesi gün'][state.selectedDay];
+    tag.textContent = `⏱ ${dayLabel}, ${diff} saat dışarıdasın (${String(state.startHour).padStart(2,'0')}:00 – ${String(state.endHour).padStart(2,'0')}:00)`;
     tag.style.color = '';
     // Konum seçiliyse butonu aktif et
     document.getElementById('btn-step1-next').disabled = !state.lat;
@@ -240,12 +307,125 @@ function initCitySelection() {
 
   citySel.addEventListener('change', function() {
     const selectedCity = TURKISH_CITIES[this.value];
-    state.lat = selectedCity.lat;
-    state.lon = selectedCity.lon;
-    state.locationName = selectedCity.name;
-    updateDurationTag();
-    savePreferences();
+    setLocation(selectedCity.lat, selectedCity.lon, selectedCity.name);
   });
+}
+
+function setLocation(lat, lon, name) {
+  state.lat = String(lat);
+  state.lon = String(lon);
+  state.locationName = name;
+  updateDurationTag();
+  savePreferences();
+}
+
+function setLocationMode(mode) {
+  const manual = mode === 'manual';
+  const manualButton = document.getElementById('btn-manual-location');
+  const locationButton = document.getElementById('btn-use-location');
+  manualButton.classList.toggle('selected', manual);
+  manualButton.setAttribute('aria-pressed', String(manual));
+  locationButton.classList.toggle('selected', !manual);
+  locationButton.setAttribute('aria-pressed', String(!manual));
+  document.getElementById('location-card').hidden = !manual;
+  document.getElementById('district-card').hidden = !manual;
+}
+
+async function searchDistricts() {
+  const query = document.getElementById('district-query').value.trim();
+  const resultsEl = document.getElementById('district-results');
+  if (query.length < 3) {
+    showToast('İlçe veya yer adı en az 3 karakter olmalı.');
+    return;
+  }
+
+  const searchButton = document.getElementById('btn-search-district');
+  searchButton.disabled = true;
+  searchButton.textContent = 'Aranıyor…';
+  resultsEl.hidden = true;
+
+  try {
+    const selectedCity = document.getElementById('city-select').selectedOptions[0]?.textContent;
+    const locationQuery = selectedCity && selectedCity !== 'Şehir seçiniz...'
+      ? `${query}, ${selectedCity}, Türkiye`
+      : `${query}, Türkiye`;
+    const params = new URLSearchParams({
+      q: locationQuery,
+      format: 'jsonv2',
+      countrycodes: 'tr',
+      limit: '8',
+      addressdetails: '1',
+      'accept-language': 'tr',
+    });
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) throw new Error('Konum araması şu anda kullanılamıyor.');
+    const data = await response.json();
+    const results = Array.isArray(data) ? data : [];
+    resultsEl.replaceChildren();
+
+    if (results.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'district-empty';
+      empty.textContent = 'Türkiye içinde eşleşen bir yer bulunamadı.';
+      resultsEl.appendChild(empty);
+    } else {
+      results.forEach(result => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'district-result';
+        button.setAttribute('role', 'option');
+        const title = document.createElement('strong');
+        title.textContent = result.name;
+        const detail = document.createElement('small');
+        detail.textContent = result.display_name;
+        button.append(title, detail);
+        button.addEventListener('click', () => {
+          const fullName = [result.name, result.address?.province || result.address?.state].filter(Boolean).join(', ');
+          setLocation(result.lat, result.lon, fullName);
+          document.getElementById('city-select').value = '';
+          document.getElementById('district-query').value = fullName;
+          resultsEl.hidden = true;
+          showToast(`${fullName} seçildi.`);
+        });
+        resultsEl.appendChild(button);
+      });
+    }
+    resultsEl.hidden = false;
+  } catch (error) {
+    showToast(error.message || 'Konum araması tamamlanamadı.');
+  } finally {
+    searchButton.disabled = false;
+    searchButton.textContent = 'Ara';
+  }
+}
+
+function useCurrentLocation() {
+  if (!navigator.geolocation) {
+    showToast('Tarayıcınız konum özelliğini desteklemiyor.');
+    setLocationMode('manual');
+    return;
+  }
+
+  const button = document.getElementById('btn-use-location');
+  button.disabled = true;
+  button.textContent = '📍 Konum alınıyor…';
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      setLocation(position.coords.latitude, position.coords.longitude, 'Mevcut konum');
+      button.disabled = false;
+      button.textContent = '📍 Konumumu kullan';
+      showToast('Mevcut konum seçildi.');
+    },
+    () => {
+      button.disabled = false;
+      button.textContent = '📍 Konumumu kullan';
+      setLocationMode('manual');
+      showToast('Konum alınamadı. İzinleri kontrol edin veya manuel seçim yapın.');
+    },
+    { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+  );
 }
 
 function initOutfitSelection() {
@@ -293,7 +473,7 @@ async function fetchWeather() {
       'weather_code',
     ].join(','),
     timezone: 'Europe/Istanbul',
-    forecast_days: '1',
+    forecast_days: '3',
   });
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -308,14 +488,47 @@ async function fetchWeather() {
     }
     const data = await res.json();
     validateWeatherResponse(data);
+    cacheWeatherResponse(data);
+    state.weatherIsCached = false;
     return data;
   } catch (error) {
-    if (error.name === 'AbortError') {
-      throw new Error('Hava durumu servisi zaman aşımına uğradı.');
+    const cached = getCachedWeatherResponse();
+    if (cached) {
+      state.weatherIsCached = true;
+      return cached;
     }
+    if (error.name === 'AbortError') throw new Error('Hava durumu servisi zaman aşımına uğradı.');
     throw error;
   } finally {
     clearTimeout(timeoutId);
+  }
+}
+
+function cacheWeatherResponse(data) {
+  try {
+    localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({
+      savedAt: Date.now(),
+      lat: state.lat,
+      lon: state.lon,
+      data,
+    }));
+  } catch {
+    // Depolama kapalıysa çevrimdışı fallback olmadan devam et.
+  }
+}
+
+function getCachedWeatherResponse() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(WEATHER_CACHE_KEY));
+    const sameLocation = cached
+      && Math.abs(Number(cached.lat) - Number(state.lat)) < 0.01
+      && Math.abs(Number(cached.lon) - Number(state.lon)) < 0.01;
+    const freshEnough = cached && Date.now() - cached.savedAt <= WEATHER_CACHE_MAX_AGE;
+    if (!sameLocation || !freshEnough) return null;
+    validateWeatherResponse(cached.data);
+    return cached.data;
+  } catch {
+    return null;
   }
 }
 
@@ -343,13 +556,17 @@ function filterHourlyData(raw) {
   const { startHour, endHour } = state;
   const times = raw.hourly.time;
   const indices = [];
+  const selectedDate = getForecastDate();
   
   times.forEach((t, i) => {
+    if (!t.startsWith(selectedDate)) return;
     const h = parseInt(t.split('T')[1].split(':')[0], 10);
     if (h >= startHour && h < endHour) indices.push(i);
   });
 
-  if (indices.length === 0) indices.push(0);
+  if (indices.length === 0) {
+    throw new Error('Seçilen tarih ve saatler için tahmin bulunamadı.');
+  }
 
   const temps       = indices.map(i => raw.hourly.temperature_2m[i]);
   const feelsLikes  = indices.map(i => raw.hourly.apparent_temperature[i]);
@@ -357,7 +574,7 @@ function filterHourlyData(raw) {
   const rainAmounts = indices.map(i => raw.hourly.precipitation[i]);
   const winds       = indices.map(i => raw.hourly.wind_speed_10m[i]);
   const codes       = indices.map(i => raw.hourly.weather_code[i]);
-  const midCode     = codes[Math.floor(codes.length / 2)];
+  const representativeCode = getMostSignificantWeatherCode(codes);
 
   return {
     minTemp:    Math.min(...temps),
@@ -368,8 +585,24 @@ function filterHourlyData(raw) {
     rainAmount: Math.max(...rainAmounts),
     maxRainProb: Math.max(...rainProbs),
     windSpeed:  Math.max(...winds),
-    weatherCode: midCode,
+    weatherCode: representativeCode,
   };
+}
+
+const WEATHER_SEVERITY = {
+  0: 0, 1: 1, 2: 2, 3: 3,
+  45: 4, 48: 5,
+  51: 4, 53: 5, 55: 6,
+  61: 5, 63: 6, 65: 7,
+  71: 6, 73: 7, 75: 8, 77: 7,
+  80: 5, 81: 6, 82: 8,
+  95: 9, 96: 10, 99: 10,
+};
+
+function getMostSignificantWeatherCode(codes) {
+  return codes.reduce((selected, code) => (
+    (WEATHER_SEVERITY[code] ?? 0) > (WEATHER_SEVERITY[selected] ?? 0) ? code : selected
+  ), codes[0]);
 }
 
 function avg(arr) {
@@ -527,12 +760,14 @@ function renderResults(w, analysis) {
   const badgesEl = document.getElementById('result-badges');
   badgesEl.innerHTML = '';
   const badgeData = [
+    { label: `📅 ${['Bugün', 'Yarın', 'Ertesi gün'][state.selectedDay]}` },
     { label: `Min ${Math.round(w.minTemp)}°` },
     { label: `Maks ${Math.round(w.maxTemp)}°` },
     { label: `💨 ${Math.round(w.windSpeed)} km/sa` },
     { label: w.willRain ? `☔ %${w.maxRainProb}` : '🌤️ Yağış Yok' },
     { label: `⏰ ${String(state.startHour).padStart(2,'0')}:00–${String(state.endHour).padStart(2,'0')}:00` },
   ];
+  if (state.weatherIsCached) badgeData.unshift({ label: '⚠️ Son kayıtlı tahmin' });
   badgeData.forEach(b => {
     const span = document.createElement('span');
     span.className = 'w-badge';
@@ -583,6 +818,9 @@ async function runAnalysis() {
   try {
     const raw = await fetchWeather();
     state.rawWeather = raw;
+    if (state.weatherIsCached) {
+      showToast('İnternet bağlantısı kurulamadı; son 3 saat içinde kaydedilen tahmin gösteriliyor.');
+    }
     
     showLoading('Veriler işleniyor...');
     const w = filterHourlyData(raw);
@@ -623,7 +861,49 @@ function resetApp() {
   goTo('screen-loading', true);
 }
 
+let lastFocusedElement = null;
+
+function openModal(modal) {
+  if (!modal) return;
+  lastFocusedElement = document.activeElement;
+  modal.hidden = false;
+  document.getElementById('app').inert = true;
+  const firstFocusable = modal.querySelector('button, [href], input, select, [tabindex]:not([tabindex="-1"])');
+  firstFocusable?.focus();
+}
+
+function closeModal(modal) {
+  if (!modal) return;
+  modal.hidden = true;
+  document.getElementById('app').inert = false;
+  lastFocusedElement?.focus();
+}
+
+function handleModalKeyboard(event) {
+  const modal = [document.getElementById('os-select-modal'), document.getElementById('ios-instructions-modal')]
+    .find(item => item && !item.hidden);
+  if (!modal) return;
+  if (event.key === 'Escape') {
+    closeModal(modal);
+    return;
+  }
+  if (event.key !== 'Tab') return;
+
+  const focusable = [...modal.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')];
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 /* ── PWA KURULUM (GARANTİLİ MANUEL MENÜ YÖNTEMİ) ── */
+if (typeof document !== 'undefined') {
   const installBtn = document.getElementById('btn-install');
   const osSelectModal = document.getElementById('os-select-modal');
   const iosInstructionsModal = document.getElementById('ios-instructions-modal');
@@ -655,9 +935,9 @@ function resetApp() {
     installBtn.addEventListener('click', (e) => {
       e.preventDefault();
       if (isIos) {
-        if (iosInstructionsModal) iosInstructionsModal.style.display = 'flex';
+        openModal(iosInstructionsModal);
       } else if (deferredPrompt) {
-        if (osSelectModal) osSelectModal.style.display = 'flex';
+        openModal(osSelectModal);
       }
     });
   }
@@ -673,11 +953,11 @@ function resetApp() {
           if (installBtn) installBtn.hidden = true;
         }
         deferredPrompt = null;
-        if (osSelectModal) osSelectModal.style.display = 'none'; // Menüyü kapat
+        closeModal(osSelectModal);
       } else {
         // Eğer tarayıcı otomatik desteklemiyorsa (örneğin Android'de Safari taklidi vs.)
         alert("Lütfen tarayıcınızın sağ üst menüsünden 'Ana Ekrana Ekle' veya 'Uygulamayı Yükle' seçeneğine dokunun.");
-        if (osSelectModal) osSelectModal.style.display = 'none';
+        closeModal(osSelectModal);
       }
     });
   }
@@ -685,23 +965,23 @@ function resetApp() {
   // 3. iOS Seçildiğinde
   if (btnSelectIos) {
     btnSelectIos.addEventListener('click', () => {
-      if (osSelectModal) osSelectModal.style.display = 'none'; // İlk menüyü kapat
-      if (iosInstructionsModal) iosInstructionsModal.style.display = 'flex'; // Yönerge menüsünü aç
+      closeModal(osSelectModal);
+      openModal(iosInstructionsModal);
     });
   }
 
   // İptal / Kapatma Butonları
   if (btnCloseOsSelect) {
-    btnCloseOsSelect.addEventListener('click', () => osSelectModal.style.display = 'none');
+    btnCloseOsSelect.addEventListener('click', () => closeModal(osSelectModal));
   }
   if (btnCloseIosModal) {
-    btnCloseIosModal.addEventListener('click', () => iosInstructionsModal.style.display = 'none');
+    btnCloseIosModal.addEventListener('click', () => closeModal(iosInstructionsModal));
   }
 
   window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
     if (installBtn) installBtn.hidden = true;
-    if (osSelectModal) osSelectModal.style.display = 'none';
+    closeModal(osSelectModal);
   });
 
   if ('serviceWorker' in navigator) {
@@ -714,10 +994,27 @@ function resetApp() {
 
 document.addEventListener('DOMContentLoaded', () => {
   populateTimeSelects();
+  initDateSelection();
   initCitySelection();
   initOutfitSelection();
   document.querySelectorAll('.outfit-btn').forEach(btn => btn.setAttribute('aria-pressed', 'false'));
   restorePreferences();
+  document.querySelectorAll('.screen').forEach(screen => {
+    const active = screen.classList.contains('active');
+    screen.setAttribute('aria-hidden', String(!active));
+    screen.inert = !active;
+  });
+  document.addEventListener('keydown', handleModalKeyboard);
+
+  document.getElementById('btn-manual-location').addEventListener('click', () => setLocationMode('manual'));
+  document.getElementById('btn-use-location').addEventListener('click', () => {
+    setLocationMode('current');
+    useCurrentLocation();
+  });
+  document.getElementById('btn-search-district').addEventListener('click', searchDistricts);
+  document.getElementById('district-query').addEventListener('keydown', event => {
+    if (event.key === 'Enter') searchDistricts();
+  });
 
   document.getElementById('time-start').addEventListener('change', function() {
     state.startHour = parseInt(this.value, 10);
@@ -753,3 +1050,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('btn-restart').addEventListener('click', resetApp);
 });
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    analyzeOutfit,
+    getMostSignificantWeatherCode,
+    validateWeatherResponse,
+    WEATHER_SEVERITY,
+  };
+}

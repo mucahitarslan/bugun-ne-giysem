@@ -1,4 +1,4 @@
-const CACHE_NAME = 'negiysem-static-v3';
+const CACHE_NAME = 'negiysem-static-v4';
 const APP_SHELL = [
   './',
   './index.html',
