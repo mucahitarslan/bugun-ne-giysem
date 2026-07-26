@@ -31,9 +31,12 @@ function forecastFixture() {
       time,
       temperature_2m: fill(22),
       apparent_temperature: fill(21),
+      relative_humidity_2m: fill(55),
       precipitation_probability: fill(10),
       precipitation: fill(0),
       wind_speed_10m: fill(8),
+      wind_gusts_10m: fill(14),
+      uv_index: fill(4),
       weather_code: fill(1),
     },
   };
@@ -79,6 +82,8 @@ try {
   await page.getByRole('button', { name: 'Başlayalım →' }).click();
   assert.equal(await page.locator('.date-btn').count(), 3);
   await page.locator('.date-btn[data-day="2"]').click();
+  await page.getByRole('button', { name: '🥵 Çabuk terlerim' }).click();
+  await page.getByRole('button', { name: '🏃 Spor' }).click();
   assert.equal(await page.locator('.date-btn[data-day="2"]').getAttribute('aria-pressed'), 'true');
   await page.getByRole('button', { name: '📍 Konumumu kullan' }).click();
   await assert.doesNotReject(() => page.getByText('Mevcut konum seçildi.').waitFor({ state: 'visible' }));
@@ -88,10 +93,14 @@ try {
   await page.getByRole('button', { name: 'Kıyafet Seç →' }).click();
   await page.getByRole('button', { name: '👕 Tişört' }).click();
   await page.getByRole('button', { name: '👖 Pantolon' }).click();
+  await page.getByRole('button', { name: '🌧️ Yağmurluk' }).click();
   await page.getByRole('button', { name: '👟 Spor' }).click();
+  await page.getByRole('button', { name: '🧢 Şapka' }).click();
   await page.getByRole('button', { name: 'Analiz Et ✨' }).click();
   await page.locator('#screen-3.active').waitFor({ state: 'visible' });
   assert.equal(await page.getByText('📅 Ertesi gün').isVisible(), true);
+  assert.equal(await page.locator('#decision-metrics').getByText('Çabuk terler').isVisible(), true);
+  assert.equal(await page.locator('#decision-metrics .metric-card').count(), 8);
 
   await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.ready;
@@ -117,7 +126,7 @@ try {
   assert.equal(await page.locator('#btn-start').isVisible(), true);
 
   const cachedAssets = await page.evaluate(async () => {
-    const cache = await caches.open('negiysem-static-v4');
+    const cache = await caches.open('negiysem-static-v5');
     const keys = await cache.keys();
     return keys.map(request => new URL(request.url).pathname);
   });

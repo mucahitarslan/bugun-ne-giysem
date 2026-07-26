@@ -18,6 +18,9 @@ function weather(overrides = {}) {
     rainAmount: 0,
     maxRainProb: 10,
     windSpeed: 8,
+    windGust: 14,
+    humidity: 50,
+    uvIndex: 3,
     weatherCode: 1,
     ...overrides,
   };
@@ -68,4 +71,33 @@ test('eksik saatlik API yanıtı reddedilir', () => {
     () => validateWeatherResponse({ hourly: { time: ['2026-07-26T09:00'] } }),
     /eksik veya tutarsız/
   );
+});
+
+test('yüksek UV ve nem kişisel koruma önerileri üretir', () => {
+  const result = analyzeOutfit(
+    weather({ minTemp: 26, maxTemp: 31, avgTemp: 28, humidity: 82, uvIndex: 7.4 }),
+    { top: 'tisort', bottom: 'sort', outer: 'yok', shoes: 'spor', accessories: [] },
+    { sensitivity: 'hot', activity: 'walking' }
+  );
+  assert.ok(result.tips.some(tip => tip.text.includes('UV indeksi')));
+  assert.ok(result.tips.some(tip => tip.text.includes('Nem %82')));
+});
+
+test('kişisel hassasiyet ve aktivite ağır katmanları etkiler', () => {
+  const result = analyzeOutfit(
+    weather({ minTemp: 21, maxTemp: 27, avgTemp: 24 }),
+    { top: 'sweatshirt', bottom: 'pantolon', outer: 'kaban', shoes: 'spor', accessories: [] },
+    { sensitivity: 'hot', activity: 'sport' }
+  );
+  assert.ok(result.tips.some(tip => tip.text.includes('Çabuk terlediğini')));
+  assert.ok(result.tips.some(tip => tip.text.includes('Hareket seviyen')));
+});
+
+test('yağış aksesuarı ve su geçirmez ayakkabı olumlu değerlendirilir', () => {
+  const result = analyzeOutfit(
+    weather({ willRain: true, rainAmount: 1.5, maxRainProb: 80 }),
+    { top: 'gomlek', bottom: 'pantolon', outer: 'yagmurluk', shoes: 'waterproof', accessories: ['umbrella'] }
+  );
+  assert.ok(result.tips.some(tip => tip.type === 'success' && tip.text.includes('Su geçirmez')));
+  assert.ok(result.tips.some(tip => tip.type === 'success' && tip.text.includes('Şemsiye')));
 });

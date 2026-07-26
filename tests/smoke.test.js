@@ -35,13 +35,16 @@ test('HTML kaynakları uygulama kabuğundaki URLlerle eşleşiyor', () => {
 });
 
 test('kıyafet seçimleri erişilebilir butonlardan oluşuyor', () => {
-  const buttons = html.match(/<button type="button" class="outfit-btn"/g) || [];
-  assert.equal(buttons.length, 14);
+  const buttons = html.match(/<button type="button" class="outfit-btn(?: selected)?"/g) || [];
+  assert.equal(buttons.length, 23);
   assert.doesNotMatch(html, /user-scalable=no|maximum-scale=/);
 });
 
 test('güncel Open-Meteo alanları kullanılıyor', () => {
   assert.match(app, /wind_speed_10m/);
+  assert.match(app, /wind_gusts_10m/);
+  assert.match(app, /relative_humidity_2m/);
+  assert.match(app, /uv_index/);
   assert.match(app, /weather_code/);
   assert.doesNotMatch(app, /windspeed_10m|weathercode/);
 });
