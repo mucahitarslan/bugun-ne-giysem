@@ -36,7 +36,7 @@ test('HTML kaynakları uygulama kabuğundaki URLlerle eşleşiyor', () => {
 
 test('kıyafet seçimleri erişilebilir butonlardan oluşuyor', () => {
   const buttons = html.match(/<button type="button" class="outfit-btn(?: selected)?"/g) || [];
-  assert.equal(buttons.length, 23);
+  assert.equal(buttons.length, 21);
   assert.doesNotMatch(html, /user-scalable=no|maximum-scale=/);
 });
 
@@ -62,7 +62,7 @@ test('tercihler güvenli biçimde tarayıcı depolamasına yazılır', () => {
 });
 
 test('üç günlük tahmin, konum seçenekleri ve veri atıfları arayüzde bulunur', () => {
-  assert.match(app, /forecast_days: '3'/);
+  assert.match(app, /forecast_days: '4'/);
   assert.match(html, /id="date-options"/);
   assert.match(html, /id="btn-use-location"/);
   assert.match(html, /id="district-query"/);

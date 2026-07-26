@@ -4,7 +4,10 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const {
   analyzeOutfit,
+  calculateDuration,
+  getDominantWeatherCode,
   getMostSignificantWeatherCode,
+  selectHourlyIndices,
   validateWeatherResponse,
 } = require('../app.js');
 
@@ -30,6 +33,24 @@ test('zaman aralığındaki en riskli hava kodu temsil edilir', () => {
   assert.equal(getMostSignificantWeatherCode([0, 2, 95, 3]), 95);
   assert.equal(getMostSignificantWeatherCode([1, 63, 45]), 63);
   assert.equal(getMostSignificantWeatherCode([0, 1, 2]), 2);
+});
+
+test('baskın hava ile kısa süreli riskli hava ayrı temsil edilir', () => {
+  const codes = [1, 1, 1, 1, 95];
+  assert.equal(getDominantWeatherCode(codes), 1);
+  assert.equal(getMostSignificantWeatherCode(codes), 95);
+});
+
+test('gece yarısını aşan zaman aralığı iki güne yayılır', () => {
+  const times = [
+    '2026-07-26T21:00', '2026-07-26T22:00', '2026-07-26T23:00',
+    '2026-07-27T00:00', '2026-07-27T01:00', '2026-07-27T02:00',
+  ];
+  assert.equal(calculateDuration(22, 2), 4);
+  assert.deepEqual(
+    selectHourlyIndices(times, '2026-07-26', '2026-07-27', 22, 2),
+    [1, 2, 3, 4]
+  );
 });
 
 test('çok sıcak havada mont ve bot tehlikeli değerlendirilir', () => {
@@ -100,4 +121,14 @@ test('yağış aksesuarı ve su geçirmez ayakkabı olumlu değerlendirilir', ()
   );
   assert.ok(result.tips.some(tip => tip.type === 'success' && tip.text.includes('Su geçirmez')));
   assert.ok(result.tips.some(tip => tip.type === 'success' && tip.text.includes('Şemsiye')));
+});
+
+test('kişisel konfor puanı profili yansıtır ve öneriler sadeleştirilir', () => {
+  const outfit = { top: 'kazak', bottom: 'pantolon', outer: 'kaban', shoes: 'bot', accessories: [] };
+  const conditions = weather({ minTemp: 25, maxTemp: 34, avgTemp: 30, feelsLike: 35, humidity: 82, uvIndex: 8, windGust: 50 });
+  const coldProfile = analyzeOutfit(conditions, outfit, { sensitivity: 'cold', activity: 'vehicle' });
+  const hotProfile = analyzeOutfit(conditions, outfit, { sensitivity: 'hot', activity: 'sport' });
+  assert.ok(coldProfile.comfortScore > hotProfile.comfortScore);
+  assert.ok(hotProfile.tips.length <= 7);
+  assert.ok(hotProfile.omittedTipCount > 0);
 });

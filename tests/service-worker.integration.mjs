@@ -12,7 +12,7 @@ const server = spawn('php', ['-S', `127.0.0.1:${port}`], {
 
 function forecastFixture() {
   const time = [];
-  for (let day = 0; day < 3; day += 1) {
+  for (let day = 0; day < 4; day += 1) {
     const date = new Date();
     date.setHours(12, 0, 0, 0);
     date.setDate(date.getDate() + day);
@@ -91,7 +91,21 @@ try {
 
   await page.getByRole('button', { name: 'Başlayalım →' }).click();
   assert.equal(await page.locator('.date-btn').count(), 3);
+  const currentIstanbulHour = await page.evaluate(() => Number(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Istanbul',
+    hour: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date())));
+  if (currentIstanbulHour < 23) {
+    assert.equal(await page.locator(`#time-start option[value="${currentIstanbulHour}"]`).isDisabled(), true);
+    assert.ok(Number(await page.locator('#time-start').inputValue()) > currentIstanbulHour);
+  } else {
+    assert.equal(await page.locator('.date-btn[data-day="1"]').getAttribute('aria-pressed'), 'true');
+  }
   await page.locator('.date-btn[data-day="2"]').click();
+  await page.locator('#time-start').selectOption('22');
+  await page.locator('#time-end').selectOption('2');
+  assert.match(await page.locator('#duration-tag').textContent(), /4 saat.*ertesi gün/);
   await page.getByRole('button', { name: '🥵 Çabuk terlerim' }).click();
   await page.getByRole('button', { name: '🏃 Spor' }).click();
   assert.equal(await page.locator('.date-btn[data-day="2"]').getAttribute('aria-pressed'), 'true');
@@ -110,8 +124,9 @@ try {
   await page.getByRole('button', { name: 'Analiz Et ✨' }).click();
   await page.locator('#screen-3.active').waitFor({ state: 'visible' });
   assert.equal(await page.getByText('📅 Ertesi gün').isVisible(), true);
+  assert.equal(await page.getByText('⏰ 22:00–02:00').isVisible(), true);
   assert.equal(await page.locator('#decision-metrics').getByText('Çabuk terler').isVisible(), true);
-  assert.equal(await page.locator('#decision-metrics .metric-card').count(), 8);
+  assert.equal(await page.locator('#decision-metrics .metric-card').count(), 10);
 
   await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.ready;
@@ -137,7 +152,7 @@ try {
   assert.equal(await page.locator('#btn-start').isVisible(), true);
 
   const cachedAssets = await page.evaluate(async () => {
-    const cache = await caches.open('negiysem-static-v6');
+    const cache = await caches.open('negiysem-static-v7');
     const keys = await cache.keys();
     return keys.map(request => new URL(request.url).pathname);
   });

@@ -59,17 +59,22 @@ function restorePreferences() {
     }
     if (['cold', 'balanced', 'hot'].includes(saved.sensitivity)) state.sensitivity = saved.sensitivity;
     if (['vehicle', 'normal', 'walking', 'sport'].includes(saved.activity)) state.activity = saved.activity;
-    if (Number.isInteger(saved.startHour) && saved.startHour >= 6 && saved.startHour <= 23) {
+    if (Number.isInteger(saved.startHour) && saved.startHour >= 0 && saved.startHour <= 23) {
       state.startHour = saved.startHour;
       document.getElementById('time-start').value = String(saved.startHour);
     }
-    if (Number.isInteger(saved.endHour) && saved.endHour >= 6 && saved.endHour <= 23) {
+    if (Number.isInteger(saved.endHour) && saved.endHour >= 0 && saved.endHour <= 23) {
       state.endHour = saved.endHour;
       document.getElementById('time-end').value = String(saved.endHour);
     }
 
+    const savedOutfit = { ...saved.outfit };
+    if (['mont', 'yagmurluk'].includes(savedOutfit.top)) {
+      savedOutfit.outer = savedOutfit.top;
+      savedOutfit.top = null;
+    }
     ['top', 'bottom', 'outer', 'shoes'].forEach(cat => {
-      const val = saved.outfit?.[cat];
+      const val = savedOutfit[cat];
       const button = document.querySelector(`.outfit-btn[data-cat="${cat}"][data-val="${val}"]`);
       if (!button) return;
       state.outfit[cat] = val;
@@ -77,8 +82,8 @@ function restorePreferences() {
       button.setAttribute('aria-pressed', 'true');
       updateCategoryBadge(cat, button.querySelector('.o-name').textContent);
     });
-    state.outfit.accessories = Array.isArray(saved.outfit?.accessories)
-      ? saved.outfit.accessories.filter(value => ['umbrella', 'hat', 'scarf', 'gloves', 'thermal'].includes(value))
+    state.outfit.accessories = Array.isArray(savedOutfit.accessories)
+      ? savedOutfit.accessories.filter(value => ['umbrella', 'hat', 'scarf', 'gloves', 'thermal'].includes(value))
       : [];
     document.querySelectorAll('.accessory-btn').forEach(button => {
       const selected = state.outfit.accessories.includes(button.dataset.val);
@@ -95,6 +100,7 @@ function restorePreferences() {
     document.getElementById('btn-analyze').disabled = !(top && bottom && shoes);
     updateDateSelection();
     updateProfileSelection();
+    updateTimeAvailability();
     updateDurationTag();
   } catch {
     try {
@@ -160,7 +166,7 @@ function populateTimeSelects() {
   const startSel = document.getElementById('time-start');
   const endSel   = document.getElementById('time-end');
 
-  for (let h = 6; h <= 23; h++) {
+  for (let h = 0; h <= 23; h++) {
     const label = `${String(h).padStart(2,'0')}:00`;
     startSel.add(new Option(label, h));
     endSel.add(new Option(label, h));
@@ -173,13 +179,18 @@ function populateTimeSelects() {
 }
 
 function getForecastDate(dayOffset = state.selectedDay) {
-  const date = new Date();
-  date.setHours(12, 0, 0, 0);
-  date.setDate(date.getDate() + dayOffset);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Istanbul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  const date = new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day) + dayOffset, 12));
   return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, '0'),
-    String(date.getDate()).padStart(2, '0'),
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, '0'),
+    String(date.getUTCDate()).padStart(2, '0'),
   ].join('-');
 }
 
@@ -199,6 +210,8 @@ function initDateSelection() {
     button.addEventListener('click', () => {
       state.selectedDay = day;
       updateDateSelection();
+      updateTimeAvailability();
+      updateDurationTag();
       savePreferences();
     });
     container.appendChild(button);
@@ -249,18 +262,53 @@ function updateProfileSelection() {
 
 function updateDurationTag() {
   const tag = document.getElementById('duration-tag');
-  const diff = state.endHour - state.startHour;
+  const diff = calculateDuration(state.startHour, state.endHour);
   
-  if (diff <= 0) {
-    tag.textContent = '⚠️ Dönüş saati çıkış saatinden önce olamaz';
+  if (diff === 0) {
+    tag.textContent = '⚠️ Çıkış ve dönüş saati aynı olamaz';
     tag.style.color = '#fca5a5';
     document.getElementById('btn-step1-next').disabled = true;
   } else {
     const dayLabel = ['Bugün', 'Yarın', 'Ertesi gün'][state.selectedDay];
-    tag.textContent = `⏱ ${dayLabel}, ${diff} saat dışarıdasın (${String(state.startHour).padStart(2,'0')}:00 – ${String(state.endHour).padStart(2,'0')}:00)`;
+    const overnight = state.endHour < state.startHour;
+    tag.textContent = `⏱ ${dayLabel}, ${diff} saat dışarıdasın (${String(state.startHour).padStart(2,'0')}:00 – ${String(state.endHour).padStart(2,'0')}:00${overnight ? ', ertesi gün' : ''})`;
     tag.style.color = '';
     // Konum seçiliyse butonu aktif et
     document.getElementById('btn-step1-next').disabled = !state.lat;
+  }
+}
+
+function calculateDuration(startHour, endHour) {
+  if (startHour === endHour) return 0;
+  return endHour > startHour ? endHour - startHour : 24 - startHour + endHour;
+}
+
+function getIstanbulHour() {
+  return Number(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Istanbul',
+    hour: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date()));
+}
+
+function updateTimeAvailability({ adjust = true } = {}) {
+  const startSelect = document.getElementById('time-start');
+  if (!startSelect) return;
+  const currentHour = getIstanbulHour();
+  const isToday = state.selectedDay === 0;
+  [...startSelect.options].forEach(option => {
+    option.disabled = isToday && Number(option.value) <= currentHour;
+  });
+
+  if (!adjust || !isToday || state.startHour > currentHour) return;
+  const firstAvailable = [...startSelect.options].find(option => !option.disabled);
+  if (firstAvailable) {
+    state.startHour = Number(firstAvailable.value);
+    startSelect.value = firstAvailable.value;
+  } else {
+    state.selectedDay = 1;
+    updateDateSelection();
+    [...startSelect.options].forEach(option => { option.disabled = false; });
   }
 }
 
@@ -586,7 +634,7 @@ async function fetchWeather() {
       'weather_code',
     ].join(','),
     timezone: 'Europe/Istanbul',
-    forecast_days: '3',
+    forecast_days: '4',
   });
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -671,14 +719,9 @@ function validateWeatherResponse(raw) {
 function filterHourlyData(raw) {
   const { startHour, endHour } = state;
   const times = raw.hourly.time;
-  const indices = [];
   const selectedDate = getForecastDate();
-  
-  times.forEach((t, i) => {
-    if (!t.startsWith(selectedDate)) return;
-    const h = parseInt(t.split('T')[1].split(':')[0], 10);
-    if (h >= startHour && h < endHour) indices.push(i);
-  });
+  const nextDate = getForecastDate(state.selectedDay + 1);
+  const indices = selectHourlyIndices(times, selectedDate, nextDate, startHour, endHour);
 
   if (indices.length === 0) {
     throw new Error('Seçilen tarih ve saatler için tahmin bulunamadı.');
@@ -693,7 +736,8 @@ function filterHourlyData(raw) {
   const gusts       = indices.map(i => raw.hourly.wind_gusts_10m[i]);
   const uvIndices   = indices.map(i => raw.hourly.uv_index[i]);
   const codes       = indices.map(i => raw.hourly.weather_code[i]);
-  const representativeCode = getMostSignificantWeatherCode(codes);
+  const dominantCode = getDominantWeatherCode(codes);
+  const severeWeatherCode = getMostSignificantWeatherCode(codes);
 
   return {
     minTemp:    Math.min(...temps),
@@ -707,8 +751,23 @@ function filterHourlyData(raw) {
     windSpeed:  Math.max(...winds),
     windGust:   Math.max(...gusts),
     uvIndex:    Math.max(...uvIndices),
-    weatherCode: representativeCode,
+    weatherCode: dominantCode,
+    severeWeatherCode,
+    conditionTimeline: buildConditionTimeline(indices.map(i => times[i]), codes),
   };
+}
+
+function selectHourlyIndices(times, selectedDate, nextDate, startHour, endHour) {
+  const overnight = endHour < startHour;
+  return times.reduce((indices, timestamp, index) => {
+    const [date, time] = timestamp.split('T');
+    const hour = Number(time.slice(0, 2));
+    const inWindow = overnight
+      ? (date === selectedDate && hour >= startHour) || (date === nextDate && hour < endHour)
+      : date === selectedDate && hour >= startHour && hour < endHour;
+    if (inWindow) indices.push(index);
+    return indices;
+  }, []);
 }
 
 const WEATHER_SEVERITY = {
@@ -725,6 +784,32 @@ function getMostSignificantWeatherCode(codes) {
   return codes.reduce((selected, code) => (
     (WEATHER_SEVERITY[code] ?? 0) > (WEATHER_SEVERITY[selected] ?? 0) ? code : selected
   ), codes[0]);
+}
+
+function getDominantWeatherCode(codes) {
+  const counts = codes.reduce((result, code) => {
+    result.set(code, (result.get(code) || 0) + 1);
+    return result;
+  }, new Map());
+  return [...counts.entries()].reduce((selected, entry) => {
+    if (!selected || entry[1] > selected[1]) return entry;
+    if (entry[1] === selected[1] && (WEATHER_SEVERITY[entry[0]] ?? 0) > (WEATHER_SEVERITY[selected[0]] ?? 0)) return entry;
+    return selected;
+  }, null)?.[0];
+}
+
+function buildConditionTimeline(times, codes) {
+  return times.reduce((segments, timestamp, index) => {
+    const hour = Number(timestamp.split('T')[1].slice(0, 2));
+    const code = codes[index];
+    const previous = segments.at(-1);
+    if (previous && previous.code === code) {
+      previous.end = (hour + 1) % 24;
+    } else {
+      segments.push({ start: hour, end: (hour + 1) % 24, code });
+    }
+    return segments;
+  }, []);
 }
 
 function avg(arr) {
@@ -771,7 +856,8 @@ function analyzeOutfit(w, outfit, preferences = {}) {
   const { top, bottom, outer = 'yok', shoes, accessories = [] } = outfit;
   const { minTemp, maxTemp, avgTemp, feelsLike, willRain,
           rainAmount, maxRainProb, windSpeed, windGust = windSpeed,
-          humidity = 50, uvIndex = 0, weatherCode } = w;
+          humidity = 50, uvIndex = 0, weatherCode,
+          severeWeatherCode = weatherCode } = w;
   const sensitivity = preferences.sensitivity || 'balanced';
   const activity = preferences.activity || 'normal';
 
@@ -905,9 +991,9 @@ function analyzeOutfit(w, outfit, preferences = {}) {
   else if (windSpeed > 25 && !tips.some(t => t.text.includes('rüzgar') || t.text.includes('km/sa'))) tips.push({ type:'warning', icon:'💨', text:`Bugün rüzgarlı bir gün (${Math.round(windSpeed)} km/sa). Hissedilen sıcaklık ${Math.round(feelsLike)}°C'ye düşecek.` });
 
   if (willRain && rainAmount > 2) tips.push({ type:'danger', icon:'⛈️', text:`Yoğun yağış bekleniyor (${rainAmount.toFixed(1)} mm). Kesinlikle şemsiye veya yağmurluk olmadan çıkma!` });
-  if ([45, 48].includes(weatherCode)) tips.push({ type:'info', icon:'🌫️', text:`Sisli bir gün. Trafikte çok dikkatli ol, görüş mesafesi düşük olacak.` });
-  if ([95, 96, 99].includes(weatherCode)) tips.push({ type:'danger', icon:'⛈️', text:`Gök gürültülü fırtına uyarısı! Mümkünse açık alanlarda durma, uzun yürüyüşlerden kaçın.` });
-  if ([71, 73, 75, 77].includes(weatherCode)) tips.push({ type:'info', icon:'❄️', text:`Kar yağışı bekleniyor. Kaygan zemine dikkat et, düşük profilli ayakkabılardan kaçın.` });
+  if ([45, 48].includes(severeWeatherCode)) tips.push({ type:'info', icon:'🌫️', text:`Sisli bir gün. Trafikte çok dikkatli ol, görüş mesafesi düşük olacak.` });
+  if ([95, 96, 99].includes(severeWeatherCode)) tips.push({ type:'danger', icon:'⛈️', text:`Gök gürültülü fırtına uyarısı! Mümkünse açık alanlarda durma, uzun yürüyüşlerden kaçın.` });
+  if ([71, 73, 75, 77].includes(severeWeatherCode)) tips.push({ type:'info', icon:'❄️', text:`Kar yağışı bekleniyor. Kaygan zemine dikkat et, düşük profilli ayakkabılardan kaçın.` });
 
   const dangerCount  = tips.filter(t => t.type === 'danger').length;
   const warningCount = tips.filter(t => t.type === 'warning').length;
@@ -918,7 +1004,35 @@ function analyzeOutfit(w, outfit, preferences = {}) {
   else if (warningCount >= 1) verdict = { cls: 'ok', emoji: '👍', text: 'Genel olarak iyi gidiyorsun! Küçük detayları göz önünde bulundur.' };
   else verdict = { cls: 'good', emoji: '🎉', text: 'Harika seçimler! Bu hava için kıyafetin tam uygun. Güzel bir gün geçir!' };
 
-  return { tips, verdict };
+  const comfortScore = getPersonalComfortScore(w, tips, { sensitivity, activity });
+  const consolidatedTips = consolidateTips(tips);
+  return {
+    tips: consolidatedTips,
+    verdict,
+    comfortScore,
+    omittedTipCount: tips.length - consolidatedTips.length,
+  };
+}
+
+function getPersonalComfortScore(weather, tips, preferences = {}) {
+  const sensitivityTarget = { cold: 23, balanced: 21, hot: 19 }[preferences.sensitivity || 'balanced'];
+  const activityAdjustment = { vehicle: 1, normal: 0, walking: -2, sport: -4 }[preferences.activity || 'normal'];
+  const target = sensitivityTarget + activityAdjustment;
+  const thermalPenalty = Math.min(30, Math.abs(weather.feelsLike - target) * 2);
+  const advicePenalty = tips.reduce((total, tip) => (
+    total + ({ danger: 14, warning: 7, info: 2, success: -2 }[tip.type] || 0)
+  ), 0);
+  return Math.max(0, Math.min(100, Math.round(100 - thermalPenalty - advicePenalty)));
+}
+
+function consolidateTips(tips, limit = 7) {
+  const priority = { danger: 0, warning: 1, info: 2, success: 3 };
+  const unique = tips.filter((tip, index) => tips.findIndex(item => item.text === tip.text) === index);
+  return unique
+    .map((tip, index) => ({ tip, index }))
+    .sort((a, b) => (priority[a.tip.type] ?? 4) - (priority[b.tip.type] ?? 4) || a.index - b.index)
+    .slice(0, limit)
+    .map(item => item.tip);
 }
 
 function renderResults(w, analysis) {
@@ -941,6 +1055,10 @@ function renderResults(w, analysis) {
     { label: w.willRain ? `☔ %${w.maxRainProb}` : '🌤️ Yağış Yok' },
     { label: `⏰ ${String(state.startHour).padStart(2,'0')}:00–${String(state.endHour).padStart(2,'0')}:00` },
   ];
+  const severeMeta = getWeatherMeta(w.severeWeatherCode);
+  if (w.severeWeatherCode !== w.weatherCode) {
+    badgeData.splice(1, 0, { label: `⚠️ En riskli: ${severeMeta.label}` });
+  }
   if (state.weatherIsCached) badgeData.unshift({ label: '⚠️ Son kayıtlı tahmin' });
   badgeData.forEach(b => {
     const span = document.createElement('span');
@@ -983,6 +1101,11 @@ function renderResults(w, analysis) {
     ['Nem', `%${w.humidity}`],
     ['Rüzgâr / hamle', `${Math.round(w.windSpeed)} / ${Math.round(w.windGust)} km/sa`],
     ['UV indeksi', w.uvIndex.toFixed(1)],
+    ['Kişisel konfor', `${analysis.comfortScore}/100`],
+    ['Hava akışı', (w.conditionTimeline || []).map(segment => {
+      const condition = getWeatherMeta(segment.code);
+      return `${String(segment.start).padStart(2, '0')}:00–${String(segment.end).padStart(2, '0')}:00 ${condition.label}`;
+    }).join(' · ')],
     ['Hassasiyet', { cold:'Çabuk üşür', balanced:'Dengeli', hot:'Çabuk terler' }[state.sensitivity]],
     ['Aktivite', { vehicle:'Araç ağırlıklı', normal:'Normal', walking:'Uzun yürüyüş', sport:'Spor' }[state.activity]],
   ];
@@ -1010,6 +1133,12 @@ function renderResults(w, analysis) {
     item.innerHTML = `<span class="adv-icon">${tip.icon}</span><span class="adv-text">${tip.text}</span>`;
     listEl.appendChild(item);
   });
+  if (analysis.omittedTipCount > 0) {
+    const item = document.createElement('div');
+    item.className = 'advice-item info';
+    item.innerHTML = `<span class="adv-icon">ℹ️</span><span class="adv-text">${analysis.omittedTipCount} düşük öncelikli veya benzer öneri sadeleştirildi.</span>`;
+    listEl.appendChild(item);
+  }
 
   if (analysis.tips.length === 0) {
     const item = document.createElement('div');
@@ -1228,6 +1357,8 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.setAttribute('aria-pressed', String(selected));
   });
   restorePreferences();
+  updateTimeAvailability();
+  updateDurationTag();
   document.querySelectorAll('.screen').forEach(screen => {
     const active = screen.classList.contains('active');
     screen.setAttribute('aria-hidden', String(!active));
@@ -1247,10 +1378,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('time-start').addEventListener('change', function() {
     state.startHour = parseInt(this.value, 10);
-    if (state.endHour <= state.startHour) {
-      state.endHour = Math.min(state.startHour + 1, 23);
-      document.getElementById('time-end').value = state.endHour;
-    }
     updateDurationTag();
     savePreferences();
   });
@@ -1267,7 +1394,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-step1-next').addEventListener('click', () => {
     if (!state.lat) return showToast('Lütfen listeden bir şehir seçin.');
-    if (state.endHour <= state.startHour) return showToast('Dönüş saati çıkış saatinden sonra olmalı.');
+    if (state.endHour === state.startHour) return showToast('Çıkış ve dönüş saati aynı olamaz.');
     goTo('screen-2');
   });
 
@@ -1284,7 +1411,13 @@ document.addEventListener('DOMContentLoaded', () => {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     analyzeOutfit,
+    buildConditionTimeline,
+    calculateDuration,
+    consolidateTips,
+    getDominantWeatherCode,
+    getPersonalComfortScore,
     getMostSignificantWeatherCode,
+    selectHourlyIndices,
     validateWeatherResponse,
     WEATHER_SEVERITY,
   };
